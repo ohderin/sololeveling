@@ -1,7 +1,5 @@
-# Team Pending Name Approval
-
-rc -> release candidate
-main -> production release
+- rc -> release candidate
+- main -> production release
 
 ## Get started
 
