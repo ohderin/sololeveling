@@ -19,7 +19,7 @@ Output will have the option to open with emulators, choose:
 
 Android emulator: Pixel9 Android 15.0 API 35
 
-### Core features
+## Core features
 
 - Set goals and tasks
 - Weekly calendar
@@ -27,6 +27,6 @@ Android emulator: Pixel9 Android 15.0 API 35
 - Level your stats, become stronger
 - Daily bonuses and streaks for increased XP
 
-# Future additions?
+### Future additions?
 - Leaderboard
 - Equipable items for increased stats
