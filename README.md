@@ -1,5 +1,8 @@
 # Team Pending Name Approval
 
+rc -> release candidate
+main -> production release
+
 ## Get started
 
 1. Install dependencies

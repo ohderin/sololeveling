@@ -1,11 +1,11 @@
 import { Text, View, StyleSheet } from "react-native";
 
-export default function Home() {
+export default function Stats() {
   return (
     <View style={styles.container}>
-      <Text style={styles.subtitle}>Home</Text>
+      <Text style={styles.subtitle}>Your Progress</Text>
       <Text style={styles.description}>
-        Placeholder text
+        get xp and level up
       </Text>
     </View>
   );
