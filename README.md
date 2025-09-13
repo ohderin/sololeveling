@@ -1,4 +1,4 @@
-### Team Pending Name Approval
+# Team Pending Name Approval
 
 ## Get started
 
@@ -19,7 +19,7 @@ Output will have the option to open with emulators, choose:
 
 Android emulator: Pixel9 Android 15.0 API 35
 
-## Core features
+### Core features
 
 - Set goals and tasks
 - Weekly calendar
