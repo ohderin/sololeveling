@@ -1,5 +1,5 @@
-- rc -> release candidate
-- main -> production release
+rc -> release candidate
+main -> production release
 
 ## Get started
 
