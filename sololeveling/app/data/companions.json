@@ -1,0 +1,13 @@
+[
+    {
+        "id": 1,
+        "name": "Aron",
+        "type": "Power",
+        "image": "aron.png",
+        "baseStats": {
+            "health": 50,
+            "attack": 10,
+            "defense": 15
+        }
+    }
+]
