@@ -2,16 +2,20 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Image, Button, ScrollView } from "react-native";
 import LevelBar from "../components/levelBar";
 import creatures from "../data/companions.json";
-import { getEquippedCompanionId, subscribe } from "../lib/taskStore";
+import { getActionPoints, spendActionPoints, getEquippedCompanionId, subscribe } from "../lib/taskStore";
 
 export default function MyCompanion() {
   const [attack, setAttack] = useState(0);
   const [defense, setDefense] = useState(0);
   const [health, setHealth] = useState(0);
   const [equippedId, setEquippedId] = useState<number | null>(getEquippedCompanionId());
+  const [ap, setAp] = useState<number>(getActionPoints());
 
   useEffect(() => {
-    const unsub = subscribe(() => setEquippedId(getEquippedCompanionId()));
+    const unsub = subscribe(() => {
+      setEquippedId(getEquippedCompanionId());
+      setAp(getActionPoints());
+    });
     return unsub;
   }, []);
 
@@ -23,6 +27,7 @@ export default function MyCompanion() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>My Character</Text>
+      <Text style={styles.apText}>Available Action Points: {ap}</Text>
       <LevelBar label="Health" level={100} maxLevel={100} color="#4CAF50" width={300} />
       <LevelBar label="Hunger" level={65} maxLevel={100} color="#FFA500" width={300} />
 
@@ -36,20 +41,20 @@ export default function MyCompanion() {
       <View style={styles.statGroup}>
         <View style={styles.levelRow}>
           <LevelBar label="Attack Power" level={attack} maxLevel={10} color="#E53935" width={260} />
-          <Button title="+" onPress={() => setAttack(Math.min(attack + 1, 10))} />
+          <Button title="+" onPress={() => { if (spendActionPoints(1)) setAttack(Math.min(attack + 1, 10)); }} />
         </View>
         <View style={styles.levelRow}>
           <LevelBar label="Max HP" level={health} maxLevel={10} color="#2E7D32" width={260} />
-          <Button title="+" onPress={() => setHealth(Math.min(health + 1, 10))} />
+          <Button title="+" onPress={() => { if (spendActionPoints(1)) setHealth(Math.min(health + 1, 10)); }} />
         </View>
         <View style={styles.levelRow}>
           <LevelBar label="Defense" level={defense} maxLevel={10} color="#1E88E5" width={260} />
-          <Button title="+" onPress={() => setDefense(Math.min(defense + 1, 10))} />
+          <Button title="+" onPress={() => { if (spendActionPoints(1)) setDefense(Math.min(defense + 1, 10)); }} />
         </View>
       </View>
 
-      <View style={styles.feedButton}>
-        <Text style={styles.feedText}>Feed (Cost 1 AP)</Text>
+      <View style={[styles.feedButton, ap === 0 && { opacity: 0.5 }] }>
+        <Text style={styles.feedText} onPress={() => spendActionPoints(1)}>Feed (Cost 1 AP)</Text>
       </View>
     </ScrollView>
   );
@@ -65,6 +70,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 16,
+  },
+  apText: {
+    marginBottom: 8,
+    color: "#333333",
   },
   compName: {
     fontSize: 18,
