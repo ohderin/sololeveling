@@ -1,5 +1,6 @@
+import { router } from "expo-router";
 import React from "react";
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet, Button } from "react-native";
 
 export default function Account() {
   return (
@@ -8,6 +9,7 @@ export default function Account() {
       <Text style={styles.description}>
         get xp and level up
       </Text>
+      <Button title="Logout" onPress={() => router.push('/login')} />
     </View>
   );
 }
