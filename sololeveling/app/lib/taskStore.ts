@@ -31,3 +31,11 @@ export const subscribe = (fn: () => void) => { // listener for shared component 
     if (i >= 0) listeners.splice(i, 1);
   };
 };
+
+let equippedCompanionId: number | null = 1; // default to first companion
+
+export const getEquippedCompanionId = () => equippedCompanionId;
+export const setEquippedCompanionId = (id: number) => {
+  equippedCompanionId = id;
+  listeners.forEach((l) => l());
+};

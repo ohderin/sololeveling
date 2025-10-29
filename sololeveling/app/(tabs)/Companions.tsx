@@ -1,63 +1,108 @@
-import React, { useState } from "react";
-import { Text, View, StyleSheet, Image, Button } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView } from "react-native";
+import { router } from "expo-router";
 import creatures from "../data/companions.json";
-import LevelBar from "../components/levelBar";
-  
-export default function Companions() {
+import { getEquippedCompanionId, setEquippedCompanionId, subscribe } from "../lib/taskStore";
 
-  const [attack, setAttack] = useState(0);
-  const [defense, setDefense] = useState(0);
-  const [speed, setSpeed] = useState(0);
+export default function Companions() {
+  const [equippedId, setEquippedIdState] = useState<number | null>(getEquippedCompanionId());
+
+  useEffect(() => {
+    const unsub = subscribe(() => setEquippedIdState(getEquippedCompanionId()));
+    return unsub;
+  }, []);
+
+  const equipped = useMemo(() => {
+    const id = equippedId ?? 1;
+    return creatures.find((c) => c.id === id) ?? creatures[0];
+  }, [equippedId]);
+
+  const handleEquip = (id: number) => {
+    setEquippedCompanionId(id);
+  };
 
   return (
-    <View style={styles.container}>
-      <Text>Companion Name: {creatures[0].name}</Text>
-      <Image source={require(`../companionImages/aron.png`)} style={{ width: 100, height: 100 }} />
-      <View style={styles.levelContainer}>
-        <LevelBar label="Attack" level={attack} maxLevel={10} color="#FF0000" />
-        <Button title="  +  " onPress={() => setAttack(Math.min(attack + 1, 10))} />
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <Text style={styles.title}>My Characters</Text>
+      <TouchableOpacity style={styles.equippedCard} onPress={() => router.push("/pages/myCompanion" as any)}> 
+        <Image source={require("../companionImages/aron.png")} style={{ width: 80, height: 80 }} />
+        <Text style={styles.equippedName}>{equipped.name}</Text>
+        <Text style={styles.equippedLabel}>Equipped</Text>
+      </TouchableOpacity>
+
+      <View style={styles.grid}>
+        {creatures.slice(0, 10).map((c) => {
+          const isEquipped = c.id === (equippedId ?? 1);
+          return (
+            <TouchableOpacity
+              key={c.id}
+              style={[styles.slot, isEquipped && styles.slotEquipped]}
+              onPress={() => handleEquip(c.id)}
+            >
+              <Image source={require("../companionImages/aron.png")} style={{ width: 48, height: 48 }} />
+              <Text style={styles.slotName}>{c.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-      <View style={styles.levelContainer}>
-        <LevelBar label="Defense" level={defense} maxLevel={10} color="#0000FF" />
-        <Button title="  +  " onPress={() => setDefense(Math.min(defense + 1, 10))} />
-      </View>
-      <View style={styles.levelContainer}>
-        <LevelBar label="Health" level={speed} maxLevel={10} color="#00FF11" />
-        <Button title="  +  " onPress={() => setSpeed(Math.min(speed + 1, 10))} />
-      </View>
-    </View>
-  );  
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: "center",
+    paddingTop: 60,
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    padding: 20,
+    backgroundColor: "#FFFFFF",
+    paddingBottom: 24,
   },
-  levelContainer: {
-    alignItems: "flex-start",
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+  equippedCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    backgroundColor: "#F9FAFB",
+    width: 140,
+    marginBottom: 16,
+  },
+  equippedName: {
+    marginTop: 8,
+    fontWeight: "600",
+  },
+  equippedLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  grid: {
     flexDirection: "row",
-    marginBottom: 10,
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 12,
+    rowGap: 12,
+    paddingHorizontal: 16,
   },
-  description: {
-    fontSize: 16,
-    color: "#888888",
-    textAlign: "center",
-    lineHeight: 24,
-  },
-  barBackground: {
-    height: 20,
-    width: '100%',
-    backgroundColor: '#ccc',
+  slot: {
+    width: 96,
+    height: 96,
     borderRadius: 10,
-    marginVertical: 10,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
   },
-  barFill: {
-    height: '100%',
-    backgroundColor: '#4caf50',
+  slotEquipped: {
+    borderColor: "#007AFF",
+  },
+  slotName: {
+    marginTop: 6,
+    fontSize: 12,
   },
 });

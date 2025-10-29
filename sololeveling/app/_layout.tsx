@@ -12,6 +12,13 @@ const StackLayout = () => {
           presentation: 'modal'
         }} 
       />
+      <Stack.Screen 
+        name="pages/myCompanion"
+        options={{
+          headerShown: false,
+          presentation: 'modal'
+        }}
+      />
     </Stack>
   );
 }
