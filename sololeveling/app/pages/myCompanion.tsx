@@ -26,7 +26,7 @@ export default function MyCompanion() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>My Character</Text>
+      <Text style={styles.title}>My Companion</Text>
       <Text style={styles.apText}>Available Action Points: {ap}</Text>
       <LevelBar label="Health" level={100} maxLevel={100} color="#4CAF50" width={300} />
       <LevelBar label="Hunger" level={65} maxLevel={100} color="#FFA500" width={300} />
