@@ -14,11 +14,10 @@ const InfoBox: React.FC<InfoBoxProps> = ({
   width = '100%',
   onProfilePress,
 }) => {
-  // Parse the text to separate name and points
-  // Format: "Aaron 3 points" -> name: "Aaron", points: "3"
+  
   const parts = text.split(' ');
-  const points = parts[parts.length - 2]; // Get the number (second to last part)
-  const name = parts.slice(0, -2).join(' '); // Get everything except last 2 parts
+  const points = parts[parts.length - 2];
+  const name = parts.slice(0, -2).join(' ');
   
   return (
     <View style={[styles.container, { width: width || '100%' }]}>

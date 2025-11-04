@@ -43,13 +43,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
-        tension: 65,        // Reduced from 100 - slower, smoother
-        friction: 12,       // Increased from 8 - less bouncy, more controlled
+        tension: 65,        
+        friction: 12,       
       }).start();
     } else {
       Animated.timing(slideAnim, {
         toValue: screenHeight,
-        duration: 400,      // Increased from 300 - slower close
+        duration: 400,      
         useNativeDriver: true,
       }).start();
     }
@@ -58,7 +58,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const handleClose = () => {
     Animated.timing(slideAnim, {
       toValue: screenHeight,
-      duration: 400,        // Increased from 300 - slower close
+      duration: 400,       
       useNativeDriver: true,
     }).start(() => {
       onClose();
