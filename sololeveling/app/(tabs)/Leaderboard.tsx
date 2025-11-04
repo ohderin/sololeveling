@@ -55,7 +55,7 @@ export default function Leaderboard() {
         ]
     };
 
-    // Weekly leaderboard (smaller numbers, more recent activity)
+    // Weekly leaderboard 
     const weeklyNames = [
         "Ethan 8 points",
         "Sophie 7 points",
@@ -85,7 +85,7 @@ export default function Leaderboard() {
         "Uma 0 points"
     ];
 
-    // Monthly leaderboard (current data)
+    // Monthly leaderboard 
     const monthlyNames = [
         "Aaron 100 points",
         "User 75 points",
@@ -115,7 +115,7 @@ export default function Leaderboard() {
         "Uma 99 points"
     ];
 
-    // All time leaderboard (highest numbers, long-term players)
+    // All time leaderboard 
     const allTimeNames = [
         "Uma 1247 points",
         "Carlos 1189 points",
@@ -159,7 +159,7 @@ export default function Leaderboard() {
         }
     };
 
-    // Sort by points (highest to lowest)
+    // Sort by highest to lowest points
     const sortedNames = getCurrentData().sort((a, b) => {
         const getPoints = (text: string) => {
             const parts = text.split(' ');
@@ -186,7 +186,7 @@ export default function Leaderboard() {
                 return tier;
             }
         }
-        return null; // No reward
+        return null; 
     };
 
     // Get user's rank (assuming user is "User" for demo)
@@ -321,7 +321,7 @@ export default function Leaderboard() {
 
                         {selectedPeriod === 'monthly' && getRewardTier(getUserRank()) && (
                             <View style={styles.yourRewardSection}>
-                                <Text style={styles.yourRewardTitle}>🎁 Your Reward</Text>
+                                <Text style={styles.yourRewardTitle}>Your Reward</Text>
                                 <View style={styles.yourRewardCard}>
                                     <Text style={[styles.yourRewardEmoji, { color: getRewardTier(getUserRank())?.color }]}>
                                         {getRewardTier(getUserRank())?.reward}
@@ -338,7 +338,7 @@ export default function Leaderboard() {
                     <View style={[styles.leaderboardContentContainer, { marginHorizontal: screenWidth < 400 ? 2 : 20 }]}>
                         {/* Top 3 Podium */}
                         <View style={styles.podiumContainer}>
-                            <Text style={styles.podiumTitle}>🏆 Top Performers</Text>
+                            <Text style={styles.podiumTitle}>Top Performers</Text>
                             
                             {/* Podium Layout */}
                             <View style={styles.podiumLayout}>
@@ -412,23 +412,29 @@ export default function Leaderboard() {
 
                         {/* Rest of Leaderboard */}
                         <View style={styles.leaderboardContainer}>
-                            <Text style={styles.leaderboardTitle}>📊 Full Rankings</Text>
-                            {sortedNames.slice(3).map((name, index) => (
-                                <View key={index + 3} style={styles.rankedEntry}>
-                                    <View style={styles.rankContainer}>
-                                        <Text style={styles.rankNumber}>{index + 4}</Text>
+                            <Text style={styles.leaderboardTitle}>Full Rankings</Text>
+                            <ScrollView 
+                                style={styles.fullRankingsScrollView}
+                                showsVerticalScrollIndicator={true}
+                                nestedScrollEnabled={true}
+                            >
+                                {sortedNames.slice(3).map((name, index) => (
+                                    <View key={index + 3} style={styles.rankedEntry}>
+                                        <View style={styles.rankContainer}>
+                                            <Text style={styles.rankNumber}>{index + 4}</Text>
+                                        </View>
+                                        <InfoBox 
+                                            text={name} 
+                                            width="85%" 
+                                            onProfilePress={() => {
+                                                const playerName = name.split(' ')[0];
+                                                const tasks = parseInt(name.split(' ')[1]);
+                                                handleProfilePress(playerName, tasks, index + 4);
+                                            }}
+                                        />
                                     </View>
-                                    <InfoBox 
-                                        text={name} 
-                                        width="85%" 
-                                        onProfilePress={() => {
-                                            const playerName = name.split(' ')[0];
-                                            const tasks = parseInt(name.split(' ')[1]);
-                                            handleProfilePress(playerName, tasks, index + 4);
-                                        }}
-                                    />
-                                </View>
-                            ))}
+                                ))}
+                            </ScrollView>
                         </View>
         </View>
                 </ScrollView>
@@ -490,7 +496,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: screenWidth < 400 ? 8 : 12,
     marginBottom: screenWidth < 400 ? 12 : 16,
-    width: screenWidth < 400 ? '95%' : '100%', // Use more width on mobile
+    width: screenWidth < 400 ? '95%' : '100%', 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -501,8 +507,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 0, // No margin when collapsed
-    minHeight: screenWidth < 400 ? 40 : 50, // Ensure header has minimum height
+    marginBottom: 0,
+    minHeight: screenWidth < 400 ? 40 : 50,
   },
   rewardsHeaderContent: {
     flex: 1,
@@ -546,7 +552,7 @@ const styles = StyleSheet.create({
     marginBottom: screenWidth < 400 ? 2 : 4,
   },
   tierReward: {
-    fontSize: screenWidth < 400 ? 14 : 16,
+    fontSize: screenWidth < 400 ? 10 : 12,
     fontWeight: '600',
     color: '#333',
     marginBottom: screenWidth < 400 ? 2 : 4,
@@ -686,7 +692,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   yourRewardEmoji: {
-    fontSize: screenWidth < 400 ? 32 : 40,
+    fontSize: screenWidth < 400 ? 24 : 26,
     marginBottom: screenWidth < 400 ? 8 : 12,
   },
   yourRewardDescription: {
@@ -809,6 +815,10 @@ const styles = StyleSheet.create({
     color: '#333333',
     textAlign: 'center',
     marginBottom: 15,
+  },
+  fullRankingsScrollView: {
+    maxHeight: screenHeight * 0.35, 
+    marginTop: 8,
   },
   rankedEntry: {
     flexDirection: 'row',
