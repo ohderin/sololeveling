@@ -3,6 +3,7 @@ import { Text, View, StyleSheet, ScrollView, TouchableOpacity, Image, ImageBackg
 import { SafeAreaView } from "react-native-safe-area-context";
 import InfoBox from "../components/leaderboardEntry";
 import ProfileModal from "../components/ProfileModal";
+import { ProfilePicture } from "../utils/profilePicture";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -355,9 +356,9 @@ export default function Leaderboard() {
                                             handleProfilePress(name, tasks, 2);
                                         }}
                                     >
-                                        <Image 
-                                            source={require('../placeholderImages/default_profile.png')} 
-                                            style={styles.podiumImage} 
+                                        <ProfilePicture 
+                                            name={sortedNames[1] ? sortedNames[1].split(' ')[0] : ''} 
+                                            size={screenWidth < 400 ? 40 : 50}
                                         />
                                         <Text style={styles.podiumName}>{sortedNames[1] ? sortedNames[1].split(' ')[0] : ''}</Text>
                                         <Text style={styles.podiumTasks}>{sortedNames[1] ? sortedNames[1].split(' ')[1] + ' tasks' : ''}</Text>
@@ -377,9 +378,9 @@ export default function Leaderboard() {
                                             handleProfilePress(name, tasks, 1);
                                         }}
                                     >
-                                        <Image 
-                                            source={require('../placeholderImages/default_profile.png')} 
-                                            style={styles.podiumImageCenter} 
+                                        <ProfilePicture 
+                                            name={sortedNames[0] ? sortedNames[0].split(' ')[0] : ''} 
+                                            size={screenWidth < 400 ? 60 : 70}
                                         />
                                         <Text style={styles.podiumNameCenter}>{sortedNames[0] ? sortedNames[0].split(' ')[0] : ''}</Text>
                                         <Text style={styles.podiumTasksCenter}>{sortedNames[0] ? sortedNames[0].split(' ')[1] + ' tasks' : ''}</Text>
@@ -399,9 +400,9 @@ export default function Leaderboard() {
                                             handleProfilePress(name, tasks, 3);
                                         }}
                                     >
-                                        <Image 
-                                            source={require('../placeholderImages/default_profile.png')} 
-                                            style={styles.podiumImage} 
+                                        <ProfilePicture 
+                                            name={sortedNames[2] ? sortedNames[2].split(' ')[0] : ''} 
+                                            size={screenWidth < 400 ? 40 : 50}
                                         />
                                         <Text style={styles.podiumName}>{sortedNames[2] ? sortedNames[2].split(' ')[0] : ''}</Text>
                                         <Text style={styles.podiumTasks}>{sortedNames[2] ? sortedNames[2].split(' ')[1] + ' tasks' : ''}</Text>

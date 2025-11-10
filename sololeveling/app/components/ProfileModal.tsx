@@ -10,6 +10,7 @@ import {
   Animated,
   ScrollView,
 } from 'react-native';
+import { ProfilePicture } from '../utils/profilePicture';
 
 interface ProfileModalProps {
   visible: boolean;
@@ -96,10 +97,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             contentContainerStyle={styles.scrollContent}
           >
             <View style={styles.profileHeader}>
-              <Image
-                source={require('../placeholderImages/default_profile.png')}
-                style={styles.profileImage}
-              />
+              <ProfilePicture name={name} size={80} />
               <Text style={styles.profileName}>{name}</Text>
               <Text style={styles.profileRank}>Rank #{rank}</Text>
             </View>
@@ -192,9 +190,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     marginBottom: 12,
   },
   profileName: {

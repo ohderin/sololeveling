@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { ProfilePicture } from '../utils/profilePicture';
 
 interface InfoBoxProps {
   text: string;           // text content
@@ -26,10 +27,7 @@ const InfoBox: React.FC<InfoBoxProps> = ({
         onPress={onProfilePress}
         activeOpacity={0.7}
       >
-        <Image 
-          source={require('../placeholderImages/default_profile.png')} 
-          style={styles.profileImage} 
-        />
+        <ProfilePicture name={name} size={40} />
         <View style={styles.textContainer}>
           <Text style={styles.nameText}>{name}</Text>
           <Text style={styles.taskText}>{points} tasks completed</Text>
@@ -56,9 +54,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     marginRight: 12,
   },
   textContainer: {
