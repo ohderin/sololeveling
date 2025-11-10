@@ -64,7 +64,7 @@ export function getProfilePictureData(name: string): {
   const selectedImage = companionImages[imageIndex];
   
   // Select color based on hash (different from image selection)
-  const colorIndex = (hash * 7) % colorTints.length; // Multiply by prime for different distribution
+  const colorIndex = (hash * 7) % colorTints.length;
   const selectedColor = colorTints[colorIndex];
   
   return {
