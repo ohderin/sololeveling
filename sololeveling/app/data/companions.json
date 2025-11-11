@@ -1,13 +1,15 @@
 [
-    {
-        "id": 1,
-        "name": "Aron",
-        "type": "Power",
-        "image": "aron.png",
-        "baseStats": {
-            "health": 50,
-            "attack": 10,
-            "defense": 15
-        }
-    }
+  { "id": 1, "name": "Aron",   "type": "Power",    "image": "aron.png", "baseStats": { "health": 50, "attack": 10, "defense": 15 } },
+  { "id": 2, "name": "Dern",  "type": "Elemental",     "image": "aron.png", "baseStats": { "health": 45, "attack": 12, "defense": 10 } },
+  { "id": 3, "name": "Mace",  "type": "Swift",      "image": "aron.png", "baseStats": { "health": 55, "attack": 8,  "defense": 12 } },
+  { "id": 4, "name": "Josh",  "type": "Swift",    "image": "aron.png", "baseStats": { "health": 60, "attack": 7,  "defense": 14 } },
+  { "id": 5, "name": "Weeb", "type": "Power",     "image": "aron.png", "baseStats": { "health": 48, "attack": 11, "defense": 11 } },
+  { "id": 6, "name": "Loze",   "type": "Power",    "image": "aron.png", "baseStats": { "health": 52, "attack": 9,  "defense": 13 } },
+  { "id": 7, "name": "Herm",   "type": "Elemental", "image": "aron.png", "baseStats": { "health": 46, "attack": 13, "defense": 9 } },
+  { "id": 8, "name": "Giannis",  "type": "Power",   "image": "aron.png", "baseStats": { "health": 50, "attack": 10, "defense": 12 } },
+  { "id": 9, "name": "Wemby",   "type": "Power",    "image": "aron.png", "baseStats": { "health": 53, "attack": 9,  "defense": 12 } },
+  { "id": 10, "name": "Bron", "type": "Swift",   "image": "aron.png", "baseStats": { "health": 57, "attack": 8,  "defense": 13 } },
+  { "id": 11, "name": "Slumberpaw", "type": "Swift", "image": "Slumberpaw.png", "baseStats": { "health": 55, "attack": 9, "defense": 13 } },
+  { "id": 12, "name": "Flitterfinch", "type": "Elemental", "image": "Flitterfinch.png", "baseStats": { "health": 48, "attack": 12, "defense": 10 } },
+  { "id": 13, "name": "Tickhare", "type": "Power", "image": "Tickhare.png", "baseStats": { "health": 52, "attack": 11, "defense": 12 } }
 ]
