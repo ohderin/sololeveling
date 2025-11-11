@@ -13,6 +13,8 @@ const StackLayout = () => {
     </SafeAreaProvider>
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="pages/settingsPage" options={{ title: "Settings", headerTitleAlign: "center" }} />
       <Stack.Screen 
         name="pages/createTask" 
         options={{ 
