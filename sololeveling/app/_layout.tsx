@@ -11,6 +11,23 @@ const StackLayout = () => {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="pages/createTask" 
+        options={{ 
+          headerShown: false,
+          presentation: 'modal'
+        }} 
+      />
+      <Stack.Screen 
+        name="pages/myCompanion"
+        options={{
+          headerShown: false,
+          presentation: 'modal'
+        }}
+      />
+    </Stack>
   );
 }
 
