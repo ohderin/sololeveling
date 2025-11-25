@@ -65,19 +65,19 @@ export default function Battle() {
     if (!enemyMove) return null;
     if (enemyMove === "rock") {
       return (
-        <View style={{ backgroundColor: "blue", width:'100%', height:'100%'}}>
+        <View style={{ backgroundColor: "#017AFF", width:'100%', height:'100%', borderRadius: 100, justifyContent: "center", alignItems: "center" }}>
           <FontAwesome5 name="magic" size={35} color="white" />
         </View>
       );
     } else if (enemyMove === "paper") {
       return (
-        <View style={{ backgroundColor: "red", width:'100%', height:'100%'}}>
+        <View style={{ backgroundColor: "red", width:'100%', height:'100%', borderRadius: 100, justifyContent: "center", alignItems: "center" }}>
           <FontAwesome5 name="fist-raised" size={35} color="white" />
         </View>
       );
     } else if (enemyMove === "scissors") {
       return (
-        <View style={{ backgroundColor: "green", width:'100%', height:'100%'}}>
+        <View style={{ backgroundColor: "green", width:'100%', height:'100%', borderRadius: 100, justifyContent: "center", alignItems: "center" }}>
           <FontAwesome5 name="wind" size={35} color="white" />
         </View>
       );
@@ -125,7 +125,7 @@ export default function Battle() {
           </Pressable>
         </View>
 
-        <Pressable style={styles.startBattleButton} onPress={() => setBattleModalVisible(true)}>
+        <Pressable style={styles.startBattleButton} onPress={() => {setBattleModalVisible(true); setEnemyHealth(100); setPlayerHealth(100);}}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text style={{ color: "white", fontSize: 18 }}>Start Battle</Text>
             <MaterialCommunityIcons name="sword-cross" size={20} color="white" />
@@ -147,7 +147,7 @@ export default function Battle() {
 
       <Modal visible={battleModalVisible}>
           <View style={styles.battleContainer}>
-            <Pressable onPress={() => setBattleModalVisible(false)}>
+            <Pressable style={{ position: "absolute", top: 40, left: 20 }} onPress={() => setBattleModalVisible(false)}>
               <Ionicons name="arrow-back-outline" size={35} color="black" />
             </Pressable>
             <View style={styles.playerCompanionContainer}>
@@ -166,9 +166,6 @@ export default function Battle() {
               <Image source={require('../companionImages/Flitterfinch.png')} style={styles.companionStyle} />
             </View>
 
-            <Pressable onPress={() => heal()}>
-              <Text>Heal 10 Health</Text>
-            </Pressable>
             {selectedMove === null || selectedMove === "rock" ? (
               <Pressable style={styles.buttonRock} onPress={() => handlePlayerMove("rock")}>
                 <FontAwesome5 name="magic" size={35} color="white" />
