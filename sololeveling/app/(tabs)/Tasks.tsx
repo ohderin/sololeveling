@@ -2,15 +2,19 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getTasks, subscribe, Task, toggleTask } from "../lib/taskStore";
+import { getTasks, subscribe, Task, toggleTask, getActionPoints } from "../lib/taskStore";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(getTasks());
+  const [ap, setAp] = useState<number>(getActionPoints());
   const [notCompletedCollapsed, setNotCompletedCollapsed] = useState(false);
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
 
   useEffect(() => {
-    const unsub = subscribe(() => setTasks(getTasks()));
+    const unsub = subscribe(() => {
+      setTasks(getTasks());
+      setAp(getActionPoints());
+    });
     return unsub;
   }, []);
 
@@ -31,6 +35,7 @@ export default function Tasks() {
   return (
     <View style={styles.container}>
       <Text style={styles.mainTitle}>Tasks</Text>
+      <View style={styles.apPill}><Text style={styles.apPillText}>AP: {ap}</Text></View>
       
       <View style={styles.bossTaskSection}>
         <Text style={styles.bossTaskTitle}>Boss Battle</Text>
@@ -282,5 +287,18 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  apPill: {
+    alignSelf: "center",
+    backgroundColor: "#EEF2FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  apPillText: {
+    color: "#1D4ED8",
+    fontWeight: "700",
+    fontSize: 12,
   },
 });
