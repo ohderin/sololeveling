@@ -21,13 +21,25 @@ export default function Battle() {
 
   // Fade in audio
   const fadeIn = async (sound: Audio.Sound, duration: number = 1000) => {
-    const steps = 20;
-    const stepDuration = duration / steps;
-    
-    for (let i = 0; i <= steps; i++) {
-      await new Promise(resolve => setTimeout(resolve, stepDuration));
-      const volume = (i / steps) * targetVolume;
-      await sound.setVolumeAsync(volume);
+    try {
+      const steps = 20;
+      const stepDuration = duration / steps;
+      
+      for (let i = 0; i <= steps; i++) {
+        await new Promise(resolve => setTimeout(resolve, stepDuration));
+        
+        // debug and check if sound is loaded
+        const status = await sound.getStatusAsync();
+        if (!status.isLoaded) {
+          console.log("Sound was unloaded during fade in");
+          return;
+        }
+        
+        const volume = (i / steps) * targetVolume;
+        await sound.setVolumeAsync(volume);
+      }
+    } catch (error) {
+      console.error("Error during fade in:", error);
     }
   };
 
@@ -119,19 +131,35 @@ export default function Battle() {
 
   // Fade out audio
   const fadeOut = async (sound: Audio.Sound, duration: number = 1000) => {
-    const currentStatus = await sound.getStatusAsync();
-    if (!currentStatus.isLoaded) return;
-    
-    const currentVolume = currentStatus.volume || 0.25;
-    const steps = 20;
-    const stepDuration = duration / steps;
-    
-    for (let i = steps; i >= 0; i--) {
-      await new Promise(resolve => setTimeout(resolve, stepDuration));
-      const volume = (i / steps) * currentVolume;
-      await sound.setVolumeAsync(volume);
+    try {
+      const currentStatus = await sound.getStatusAsync();
+      if (!currentStatus.isLoaded) return;
+      
+      const currentVolume = currentStatus.volume || 0.25;
+      const steps = 20;
+      const stepDuration = duration / steps;
+      
+      for (let i = steps; i >= 0; i--) {
+        await new Promise(resolve => setTimeout(resolve, stepDuration));
+        
+        // debug and check if sound is loaded
+        const status = await sound.getStatusAsync();
+        if (!status.isLoaded) {
+          console.log("Sound was unloaded during fade out");
+          return;
+        }
+        
+        const volume = (i / steps) * currentVolume;
+        await sound.setVolumeAsync(volume);
+      }
+      
+      const finalStatus = await sound.getStatusAsync();
+      if (finalStatus.isLoaded) {
+        await sound.stopAsync();
+      }
+    } catch (error) {
+      console.error("Error during fade out:", error);
     }
-    await sound.stopAsync();
   };
 
   // Load and play audio when screen is focused
@@ -149,7 +177,7 @@ export default function Battle() {
 
           // Load the sound
           const { sound } = await Audio.Sound.createAsync(
-            require("../barena_assets/Elona OST - Battle 2.mp3"),
+            require("../barena_assets/Elona_OST_Battle_2.mp3"),
             { shouldPlay: true, isLooping: true, volume: 0 }
           );
 
@@ -170,12 +198,21 @@ export default function Battle() {
         isMounted = false;
         if (soundRef.current) {
           fadeOut(soundRef.current).then(() => {
-            soundRef.current?.unloadAsync();
+            soundRef.current?.unloadAsync().catch(err => {
+              console.error("Error unloading sound:", err);
+            });
+            soundRef.current = null;
+          }).catch(err => {
+            console.error("Error during fade out cleanup:", err);
+            // attempt unload at fade out failure
+            soundRef.current?.unloadAsync().catch(() => {});
             soundRef.current = null;
           });
         }
         if (hitSoundRef.current) {
-          hitSoundRef.current.unloadAsync();
+          hitSoundRef.current.unloadAsync().catch(err => {
+            console.error("Error unloading hit sound:", err);
+          });
           hitSoundRef.current = null;
         }
       };
