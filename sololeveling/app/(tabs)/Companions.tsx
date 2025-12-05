@@ -1,7 +1,8 @@
 import React, { useState, useRef } from "react";
 import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView, Modal, PanResponder, Animated } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import creatures from "../data/companions.json";
+import { Background } from "@react-navigation/elements";
 
 const getCompanionImage = (imageName: string) => {
   const imageMap: { [key: string]: any } = {
@@ -27,9 +28,9 @@ const getCompanionBackground = (companionName: string) => {
 // Change the indicator for each companion by modifying the mapping below
 const getElementalIndicator = (companionName: string) => {
   const indicatorMap: { [key: string]: any } = {
-    "Tickhare": require("./companions_assets/Power.png"),
-    "Slumberpaw": require("./companions_assets/Elemental.png"),
-    "Flitterfinch": require("./companions_assets/Swift.png"),
+    "Tickhare": require("../companionImages/icons/fist.png"),
+    "Slumberpaw": require("../companionImages/icons/magic.png"),
+    "Flitterfinch": require("../companionImages/icons/wind.png"),
     // Add more companions here as needed
     // Options: Power.png, Elemental.png, Swift.png
   };
@@ -78,8 +79,8 @@ export default function Companions() {
   const [hungryCompanionId, setHungryCompanionId] = useState<number | null>(null);
   
   // State for each companion's stats
-  const [companionStats, setCompanionStats] = useState<{ [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number } }>(() => {
-    const initial: { [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number } } = {};
+  const [companionStats, setCompanionStats] = useState<{ [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number; level: number;} }>(() => {
+    const initial: { [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number; level: number; } } = {};
     userCompanions.forEach((c) => {
       initial[c.id] = {
         attack: c.baseStats.attack,
@@ -87,6 +88,7 @@ export default function Companions() {
         defense: c.baseStats.defense,
         health: c.baseStats.health,
         hunger: c.name === "Flitterfinch" ? 0 : 65, // Flitterfinch starts at 0 hunger
+        level: c.baseStats.level,
       };
     });
     return initial;
@@ -99,7 +101,9 @@ export default function Companions() {
     defense: selectedCompanion?.baseStats.defense || 0,
     health: selectedCompanion?.baseStats.health || 0,
     hunger: 65,
+    level: selectedCompanion?.baseStats.level || 0,
   };
+
 
   const updateStat = (stat: "attack" | "maxHp" | "defense", delta: number) => {
     setCompanionStats((prev) => ({
@@ -195,6 +199,16 @@ export default function Companions() {
     );
   };
 
+  const FoodBar = ({ value, maxValue, color }: { value: number; maxValue: number; color: string }) => {
+    const percentage = Math.min((value / maxValue) * 100, 100);
+    return (
+      <View style={styles.foodBar}>
+        <View style={[styles.barFill, { width: `${percentage}%`, backgroundColor: color }]} />
+      </View>
+    );
+  };
+
+
   return (
     <View style={styles.mainContainer}>
       {/* Top Navbar */}
@@ -251,7 +265,7 @@ export default function Companions() {
         </ScrollView>
       </View>
 
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      
 
       {/* Selected Companion Details */}
       {selectedCompanion && (
@@ -278,23 +292,8 @@ export default function Companions() {
             
             {/* Companion Image and Name */}
             <View style={styles.companionContent}>
-              <View style={styles.imageWrapper}>
-                <Image
-                  source={getCompanionImage(selectedCompanion.image)}
-                  style={styles.companionImage}
-                  resizeMode="contain"
-                />
-                {/* Feed Button */}
-                <TouchableOpacity 
-                  style={styles.feedButton}
-                  onPress={() => setShowFeedModal(true)}
-                >
-                  <Image
-                    source={require("./companions_assets/drumstick.png")}
-                    style={styles.feedButtonIcon}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
+              <View style={styles.nameContainer}>
+                <Text style={styles.companionName}>{selectedCompanion.name}</Text>
                 {/* Elemental Indicator */}
                 <Image
                   source={getElementalIndicator(selectedCompanion.name)}
@@ -302,28 +301,57 @@ export default function Companions() {
                   resizeMode="contain"
                 />
               </View>
+              <View style={styles.imageWrapper}>
+                <Image
+                  source={getCompanionImage(selectedCompanion.image)}
+                  style={styles.companionImage}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.levelTextContainer}>
+                <Text style={{fontSize: 16, color: "white"}}>Level </Text>
+                <Text style={styles.levelText}>
+                  { // try stats.level, then baseStats.level, then fallback
+                    stats?.level ?? selectedCompanion?.baseStats?.level ?? 'Lv —'
+                  }
+                </Text>
+                <Text style={{fontSize: 16, color: "white"}}> / </Text>
+                <Text style={{fontSize: 16, color: "#acacacff"}}>30</Text>
+              </View>
+              {/* Health and Hunger Bars */}
+              <View style={styles.barsContainer}>
+                <View style={styles.healthBarContainer}>
+                  <HealthBar value={stats.health} maxValue={stats.maxHp} color="#4CAF50" />
+                </View>
+                <View style={styles.feedBarContainer}>
+                  <FoodBar value={stats.hunger} maxValue={100} color="#FFA500" />
+                </View>
+              </View>
+              {/* Feed Button */}
+                <TouchableOpacity 
+                  style={styles.feedButton}
+                  onPress={() => setShowFeedModal(true)}
+                >
+                  <Text style={styles.feedButtonText}>Feed</Text>
+                  <Image
+                    source={require("../companionImages/icons/coffee.png")}
+                    style={styles.feedButtonIcon}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
               
-              <Text style={styles.companionName}>{selectedCompanion.name}</Text>
+              
             </View>
           </View>
-
-          {/* Health and Hunger Bars */}
-          <View style={styles.barsContainer}>
-            <View style={styles.barLabelContainer}>
-              <Text style={styles.barLabel}>Health</Text>
-              <HealthBar value={stats.health} maxValue={stats.maxHp} color="#4CAF50" />
-            </View>
-            <View style={styles.barLabelContainer}>
-              <Text style={styles.barLabel}>Hunger</Text>
-              <HealthBar value={stats.hunger} maxValue={100} color="#FFA500" />
-            </View>
-          </View>
-
+ 
           {/* Stats with +/- buttons */}
           <View style={styles.statsContainer}>
             {/* Attack Power */}
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Attack Power</Text>
+              <View style={{flexDirection: "row", alignItems: "center",}}>
+                <FontAwesome5 name={"fist-raised"} size={25} color="#6320EE"/>
+                <Text style={styles.statLabel}> Attack</Text>
+              </View>
               <View style={styles.statControls}>
                 <TouchableOpacity
                   style={styles.statButton}
@@ -343,7 +371,10 @@ export default function Companions() {
 
             {/* Max HP */}
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Max HP</Text>
+              <View style={{flexDirection: "row", alignItems: "center"}}>
+                <Ionicons name={"heart"} size={25} color="#6320EE"/>
+                <Text style={styles.statLabel}>Health</Text>
+              </View>
               <View style={styles.statControls}>
                 <TouchableOpacity
                   style={styles.statButton}
@@ -363,7 +394,10 @@ export default function Companions() {
 
             {/* Defense */}
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Defense</Text>
+              <View style={{flexDirection: "row", alignItems: "center"}}>
+                <Ionicons name={"shield"} size={25} color="#6320EE"/>
+                <Text style={styles.statLabel}>Defense</Text>
+              </View>
               <View style={styles.statControls}>
                 <TouchableOpacity
                   style={styles.statButton}
@@ -383,7 +417,6 @@ export default function Companions() {
           </View>
           </View>
         )}
-      </ScrollView>
 
       {/* Feed Modal */}
       <Modal
@@ -527,10 +560,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   topNavbar: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#454851",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-    paddingTop: 60,
+    borderBottomColor: "#8a8a8aff",
+    paddingTop: 30,
     paddingBottom: 0,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -574,7 +607,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   navImageCircleActive: {
-    borderColor: "#007AFF",
+    borderColor: "#B7B0FF",
     borderWidth: 3,
   },
   navImageCircleTeam: {
@@ -613,7 +646,6 @@ const styles = StyleSheet.create({
     width: "100%",
     minHeight: 360,
     borderRadius: 0,
-    overflow: "hidden",
     marginBottom: 20,
     position: "relative",
   },
@@ -656,7 +688,7 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     position: "relative",
-    marginBottom: 16,
+ 
   },
   companionImage: {
     width: 200,
@@ -665,33 +697,45 @@ const styles = StyleSheet.create({
     borderColor: "#FFFFFF",
     borderRadius: 0,
   },
-  feedButton: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#FFA500",
-    justifyContent: "center",
+  nameContainer: {
+    width: "60%",
+    height: 40,
+    justifyContent: "space-evenly",
     alignItems: "center",
-    borderWidth: 0,
+    flexDirection: "row",
+  },
+  feedButton: {
+    width: 130,
+    height: 35,
+    flexDirection: "row",
+    alignSelf: "center",
+    borderRadius: 100,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    borderWidth: 2,
     borderColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    justifyContent: "center",
   },
   feedButtonIcon: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
+    marginLeft: 8,
+  },
+  levelTextContainer:{
+    flexDirection: "row",
+    marginBottom: 10,
+    alignSelf: "flex-start",
+  },
+  levelText:{
+    fontSize: 16,
+    color: "white",
+  },
+  feedButtonText:{
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "500",
   },
   elementalIndicator: {
-    position: "absolute",
-    // Adjust position here - same for all companions
-    top: 8,
-    left: -20,
     width: 40,
     height: 40,
   },
@@ -702,22 +746,32 @@ const styles = StyleSheet.create({
   },
   barsContainer: {
     width: "100%",
-    maxWidth: 300,
-    marginBottom: 32,
+    maxWidth: 400,
+    marginBottom: 20,
     gap: 16,
   },
-  barLabelContainer: {
+  healthBarContainer: {
     width: "100%",
   },
-  barLabel: {
+  feedBarContainer: {
+    width: "100%",
+  },
+  healthBarLabel: {
     fontSize: 14,
     fontWeight: "500",
     marginBottom: 6,
-    color: "#333",
+    color: "white",
   },
   barContainer: {
     width: "100%",
     height: 20,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  foodBar: {
+    width: "100%",
+    height: 10,
     backgroundColor: "#E0E0E0",
     borderRadius: 10,
     overflow: "hidden",
@@ -728,19 +782,20 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     width: "100%",
-    maxWidth: 300,
+    maxWidth: 370,
     gap: 20,
   },
   statRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 2,
   },
   statLabel: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "500",
     color: "#333",
+    marginLeft: 15
   },
   statControls: {
     flexDirection: "row",

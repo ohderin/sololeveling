@@ -41,7 +41,7 @@ export default function Login() {
         return;
       }
 
-      if (email === usernameVerified && pass === passwordVerified) {
+      if (email.toLowerCase() === usernameVerified.toLowerCase() && pass === passwordVerified) {
         router.push('/Tasks');
       } else {
         Alert.alert("Login failed", "Incorrect email or password.");

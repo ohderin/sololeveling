@@ -4,7 +4,21 @@ import React from "react"
 
 export default () => {
     return (
-        <Tabs>
+        <Tabs
+            screenOptions={{
+                tabBarShowLabel: false,
+                tabBarActiveTintColor: "#B7B0FF",     // active icon color
+                tabBarInactiveTintColor: "white",   // inactive icon color
+                tabBarStyle: {
+                backgroundColor: "#454851",         // tab bar background color
+                },
+                tabBarItemStyle: {
+                  alignItems: "center",     // center icon horizontally
+                  justifyContent: "center", // center icon vertically inside the tab item
+                  paddingVertical: 10,
+                },
+            }}
+        >
             <Tabs.Screen 
                 name="Leaderboard"
                 options={{
