@@ -26,6 +26,7 @@ export default function Tasks() {
   const completedCount = Math.min(dailyCompletions, dailyGoal);
   const progress = `${completedCount}/${dailyGoal}`;
   const progressPercentage = (completedCount / dailyGoal) * 100;
+  const isProgressComplete = completedCount >= dailyGoal;
 
   const getTimeRemaining = (deadline?: string) => {
     if (!deadline) return null;
@@ -56,8 +57,8 @@ export default function Tasks() {
             </View>
           </View>
         </View>
-        <TouchableOpacity style={styles.claimButton}>
-          <Text style={styles.claimButtonText}>Battle!</Text>
+        <TouchableOpacity style={[styles.claimButton, isProgressComplete && styles.claimButtonActive]}>
+          <Text style={[styles.claimButtonText, isProgressComplete && styles.claimButtonTextActive]}>Battle!</Text>
         </TouchableOpacity>
       </View>
 
@@ -223,10 +224,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
   },
+  claimButtonActive: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
   claimButtonText: {
     color: "#666666",
     fontSize: 14,
     fontWeight: "500",
+  },
+  claimButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   scrollView: {
     flex: 1,
