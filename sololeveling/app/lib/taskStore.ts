@@ -6,6 +6,7 @@ export type Task = {
   duration?: "daily" | "weekly";
   priority?: "low" | "medium" | "high";
   completed?: boolean;
+  completedAt?: string;
   deadline?: string;
 };
 
@@ -21,8 +22,13 @@ export const toggleTask = (id: string) => {
   const task = tasks.find(t => t.id === id);
   if (task) {
     task.completed = !task.completed;
-    if (task.completed) actionPoints += AP_PER_TASK;
-    else actionPoints = Math.max(0, actionPoints - AP_PER_TASK);
+    if (task.completed) {
+      task.completedAt = new Date().toISOString();
+      actionPoints += AP_PER_TASK;
+    } else {
+      task.completedAt = undefined;
+      actionPoints = Math.max(0, actionPoints - AP_PER_TASK);
+    }
     listeners.forEach((l) => l());
   }
 };
@@ -47,6 +53,34 @@ const AP_PER_TASK = 1;
 let actionPoints = 0;
 
 export const getActionPoints = () => actionPoints;
+
+// daily tracking (resets at 5 AM local time)
+const getTodayStart = (): Date => {
+  const now = new Date();
+  const today5am = new Date(now);
+  today5am.setHours(5, 0, 0, 0);
+  
+  if (now.getHours() < 5) {
+    today5am.setDate(today5am.getDate() - 1);
+  }
+  
+  return today5am;
+};
+
+let dailyBonus = 0;
+export const getDailyCompletions = (): number => {
+  const todayStart = getTodayStart();
+  const actual = tasks.filter(task => {
+    if (!task.completed || !task.completedAt) return false;
+    const completedDate = new Date(task.completedAt);
+    return completedDate >= todayStart;
+  }).length;
+  return actual + dailyBonus;
+};
+export const hax = () => {
+  dailyBonus = 10;
+  listeners.forEach((l) => l());
+};
 export const addActionPoints = (amount: number) => {
   actionPoints = Math.max(0, actionPoints + amount);
   listeners.forEach((l) => l());
