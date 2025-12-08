@@ -9,27 +9,24 @@ const StackLayout = () => {
       <StatusBar style="dark" />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="pages/settingsPage" options={{ title: "Settings", headerTitleAlign: "center" }} />
+        <Stack.Screen 
+          name="pages/createTask" 
+          options={{ 
+            headerShown: false,
+            presentation: 'modal'
+          }} 
+        />
+        <Stack.Screen 
+          name="pages/myCompanion"
+          options={{
+            headerShown: false,
+            presentation: 'modal'
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="pages/settingsPage" options={{ title: "Settings", headerTitleAlign: "center" }} />
-      <Stack.Screen 
-        name="pages/createTask" 
-        options={{ 
-          headerShown: false,
-          presentation: 'modal'
-        }} 
-      />
-      <Stack.Screen 
-        name="pages/myCompanion"
-        options={{
-          headerShown: false,
-          presentation: 'modal'
-        }}
-      />
-    </Stack>
   );
 }
 
