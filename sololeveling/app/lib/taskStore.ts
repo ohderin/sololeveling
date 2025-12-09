@@ -1,3 +1,5 @@
+import { addActionPoints as addAP, getActionPoints as getAP, spendActionPoints as spendAP } from "./apStore";
+
 export type Task = { 
   id: string; 
   name: string; 
@@ -10,6 +12,7 @@ export type Task = {
   deadline?: string;
 };
 
+const AP_PER_TASK = 1;
 const tasks: Task[] = [];
 const listeners: (() => void)[] = [];
 
@@ -24,10 +27,10 @@ export const toggleTask = (id: string) => {
     task.completed = !task.completed;
     if (task.completed) {
       task.completedAt = new Date().toISOString();
-      actionPoints += AP_PER_TASK;
+      addAP(AP_PER_TASK);
     } else {
       task.completedAt = undefined;
-      actionPoints = Math.max(0, actionPoints - AP_PER_TASK);
+      spendAP(AP_PER_TASK);
     }
     listeners.forEach((l) => l());
   }
@@ -48,11 +51,10 @@ export const setEquippedCompanionId = (id: number) => {
   listeners.forEach((l) => l());
 };
 
-// action points 
-const AP_PER_TASK = 1;
-let actionPoints = 0;
-
-export const getActionPoints = () => actionPoints;
+// Re-export AP functions from apStore for backward compatibility
+export const getActionPoints = getAP;
+export const addActionPoints = addAP;
+export const spendActionPoints = spendAP;
 
 // daily tracking (resets at 5 AM local time)
 const getTodayStart = (): Date => {
@@ -79,15 +81,6 @@ export const getDailyCompletions = (): number => {
 };
 export const hax = () => {
   dailyBonus = 10;
+  addAP(10); // Also add 10 AP for testing
   listeners.forEach((l) => l());
-};
-export const addActionPoints = (amount: number) => {
-  actionPoints = Math.max(0, actionPoints + amount);
-  listeners.forEach((l) => l());
-};
-export const spendActionPoints = (amount: number) => {
-  if (actionPoints < amount) return false;
-  actionPoints -= amount;
-  listeners.forEach((l) => l());
-  return true;
 };
