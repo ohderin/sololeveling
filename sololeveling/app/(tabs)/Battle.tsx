@@ -22,9 +22,12 @@ const getCompanionImage = (imageName: string) => {
 };
 
 // Filter to only show companions the user has
-const userCompanions = creatures.filter(
-  (c) => c.name === "Tickhare" || c.name === "Slumberpaw" || c.name === "Flitterfinch"
-);
+const getUserCompanions = () => {
+  // This will be updated when Wearywise is added
+  return creatures.filter(
+    (c) => c.name === "Tickhare" || c.name === "Slumberpaw" || c.name === "Flitterfinch" || c.name === "Wearywise"
+  );
+};
 
 export default function Battle() {
   const [result, setResult] = useState("");
@@ -43,6 +46,10 @@ export default function Battle() {
   const [activeCompanionId, setActiveCompanionId] = useState<number | null>(teamMembers[0] || null);
   const [selectedTeamSlot, setSelectedTeamSlot] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>(getTasks());
+  const [dyingCompanions, setDyingCompanions] = useState<Set<number>>(new Set());
+  const [enemyDying, setEnemyDying] = useState(false);
+  const [showEnemyHelpModal, setShowEnemyHelpModal] = useState(false);
+  const [userCompanions, setUserCompanions] = useState(getUserCompanions());
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -59,6 +66,9 @@ export default function Battle() {
   const battleMusic = useAudioPlayer(require('../../assets/sounds/Battle.mp3'));
   const battleMusicVolumeAnim = useRef(new Animated.Value(0)).current;
   const redPulseAnim = useRef(new Animated.Value(0)).current;
+  const deathAnimations = useRef<{ [key: number]: { saturation: Animated.Value; scale: Animated.Value } }>({});
+  const enemyDeathAnim = useRef({ saturation: new Animated.Value(1), scale: new Animated.Value(1) }).current;
+  const ENEMY_NAME = "Wearywise";
   
 
   const MAX_VOLUME = 0.05;
@@ -122,6 +132,42 @@ export default function Battle() {
     return unsubscribe;
   }, []);
 
+  // Monitor companion health and start death animation if health is 0 or lower
+  useEffect(() => {
+    const currentTeam = [...teamMembers];
+    currentTeam.forEach(companionId => {
+      const health = getCompanionHealth(companionId);
+      if (health <= 0 && currentTeam.includes(companionId) && !dyingCompanions.has(companionId)) {
+        startDeathAnimation(companionId);
+      }
+    });
+  }, [companionHealths, teamMembers, activeCompanionId, battleModalVisible, dyingCompanions]);
+
+  // Ensure active companion health is initialized and in state
+  useEffect(() => {
+    if (activeCompanionId && battleModalVisible) {
+      const companion = creatures.find(c => c.id === activeCompanionId);
+      if (companion) {
+        // Initialize health if not already set
+        const currentHealth = getCompanionHealth(activeCompanionId);
+        if (currentHealth === undefined || currentHealth === null) {
+          initializeHealth(activeCompanionId, companion.baseStats.health);
+        }
+        
+        // Ensure health is in state
+        setCompanionHealths(prev => {
+          if (prev[activeCompanionId] === undefined) {
+            return {
+              ...prev,
+              [activeCompanionId]: getCompanionHealth(activeCompanionId)
+            };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [activeCompanionId, battleModalVisible]);
+
   // Animate when battle modal opens
   useEffect(() => {
     if (battleModalVisible) {
@@ -133,10 +179,20 @@ export default function Battle() {
         duration: 800,
         useNativeDriver: true,
       }).start();
-      // Set active companion to first team member if not set
-      if (!activeCompanionId && teamMembers.length > 0) {
-        setActiveCompanionId(teamMembers[0]);
-      }
+        // Set active companion to first team member if not set
+        if (!activeCompanionId && teamMembers.length > 0) {
+          const firstCompanionId = teamMembers[0];
+          setActiveCompanionId(firstCompanionId);
+          // Initialize health for the active companion
+          const companion = creatures.find(c => c.id === firstCompanionId);
+          if (companion) {
+            initializeHealth(firstCompanionId, companion.baseStats.health);
+            setCompanionHealths(prev => ({
+              ...prev,
+              [firstCompanionId]: getCompanionHealth(firstCompanionId)
+            }));
+          }
+        }
     }
   }, [battleModalVisible, teamMembers, activeCompanionId]);
 
@@ -409,7 +465,14 @@ export default function Battle() {
 
   function takeDamage(amount: number, recipient: string) {
       if (recipient === "enemy") {
-          setEnemyHealth((prevHealth) => Math.max(prevHealth - amount, 0));
+          setEnemyHealth((prevHealth) => {
+            const newHealth = Math.max(prevHealth - amount, 0);
+            // Start enemy death animation if health is 0 or lower
+            if (newHealth <= 0 && !enemyDying) {
+              setTimeout(() => startEnemyDeathAnimation(), 100);
+            }
+            return newHealth;
+          });
       } else if (recipient === "player" && activeCompanionId) {
           // Apply damage to the active companion only
           takeCompanionDamage(activeCompanionId, amount);
@@ -419,7 +482,157 @@ export default function Battle() {
             ...prev,
             [activeCompanionId]: newHealth
           }));
+          
+          // Start death animation if health is 0 or lower
+          if (newHealth <= 0 && !dyingCompanions.has(activeCompanionId)) {
+            startDeathAnimation(activeCompanionId);
+          }
       }
+  }
+
+  function startDeathAnimation(companionId: number) {
+    // Mark companion as dying
+    setDyingCompanions(prev => new Set(prev).add(companionId));
+    
+    // Create animation values if they don't exist
+    if (!deathAnimations.current[companionId]) {
+      deathAnimations.current[companionId] = {
+        saturation: new Animated.Value(1),
+        scale: new Animated.Value(1),
+      };
+    }
+    
+    const anim = deathAnimations.current[companionId];
+    
+    // Reset animation values
+    anim.saturation.setValue(1);
+    anim.scale.setValue(1);
+    
+    // Start death animation: fade saturation and shrink
+    Animated.parallel([
+      // Fade saturation (opacity from 1 to 0)
+      Animated.timing(anim.saturation, {
+        toValue: 0,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+      // Shrink scale
+      Animated.timing(anim.scale, {
+        toValue: 0,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // After animation completes, remove from team
+      removeTeamMember(companionId);
+      setDyingCompanions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(companionId);
+        return newSet;
+      });
+      
+      // Clean up animation ref
+      delete deathAnimations.current[companionId];
+      
+      // Switch to next available companion if this was the active one
+      if (activeCompanionId === companionId) {
+        // Get fresh team members from store immediately after removal
+        const updatedTeam = getTeamMembers();
+        
+        // Force update teamMembers state to ensure re-render
+        setTeamMembers(updatedTeam);
+        
+        if (updatedTeam.length > 0) {
+          const nextCompanionId = updatedTeam[0];
+          const nextCompanion = creatures.find(c => c.id === nextCompanionId);
+          
+          if (nextCompanion) {
+            // Initialize health for the new active companion first
+            initializeHealth(nextCompanionId, nextCompanion.baseStats.health);
+            
+            // Update companion healths state immediately with the new companion
+            const newHealth = getCompanionHealth(nextCompanionId);
+            setCompanionHealths(prev => ({
+              ...prev,
+              [nextCompanionId]: newHealth
+            }));
+            
+            // Set active companion after health is initialized
+            // Use a small delay to ensure state updates propagate
+            setTimeout(() => {
+              setActiveCompanionId(nextCompanionId);
+            }, 0);
+          }
+          
+          // Show action buttons menu when new companion comes in
+          setBattleStarted(false);
+          // Animate action buttons to be visible and battle buttons to be hidden
+          actionButtonsSlideAnim.setValue(0); // 0 = visible
+          battleButtonsSlideAnim.setValue(1); // 1 = hidden
+        } else {
+          // No companions left, exit battle
+          setActiveCompanionId(null);
+          setBattleModalVisible(false);
+          setBattleStarted(false);
+        }
+      }
+    });
+  }
+
+  function startEnemyDeathAnimation() {
+    setEnemyDying(true);
+    
+    // Reset animation values
+    enemyDeathAnim.saturation.setValue(1);
+    enemyDeathAnim.scale.setValue(1);
+    
+    // Start death animation: fade saturation and shrink
+    Animated.parallel([
+      // Fade saturation (opacity from 1 to 0)
+      Animated.timing(enemyDeathAnim.saturation, {
+        toValue: 0,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+      // Shrink scale
+      Animated.timing(enemyDeathAnim.scale, {
+        toValue: 0,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // After animation completes, show help modal
+      setShowEnemyHelpModal(true);
+    });
+  }
+
+  function handleHelpEnemy() {
+    // Add Wearywise to user companions
+    setUserCompanions(getUserCompanions());
+    
+    // Initialize health for Wearywise
+    const wearywise = creatures.find(c => c.name === ENEMY_NAME);
+    if (wearywise) {
+      initializeHealth(wearywise.id, wearywise.baseStats.health);
+    }
+    
+    setShowEnemyHelpModal(false);
+    setBattleModalVisible(false);
+    setBattleStarted(false);
+    setEnemyHealth(100);
+    setEnemyDying(false);
+    enemyDeathAnim.saturation.setValue(1);
+    enemyDeathAnim.scale.setValue(1);
+  }
+
+  function handleDeclineHelpEnemy() {
+    setShowEnemyHelpModal(false);
+    setBattleModalVisible(false);
+    setBattleStarted(false);
+    setEnemyHealth(100);
+    setEnemyDying(false);
+    enemyDeathAnim.saturation.setValue(1);
+    enemyDeathAnim.scale.setValue(1);
   }
   function heal() {
       if (activeCompanionId) {
@@ -804,6 +1017,37 @@ export default function Battle() {
           </View>
         </Modal>
 
+        {/* Enemy Help Modal */}
+        <Modal
+          visible={showEnemyHelpModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowEnemyHelpModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Help {ENEMY_NAME} up?</Text>
+              <Text style={styles.modalText}>
+                Would you like to help {ENEMY_NAME}? They will become your companion.
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={handleDeclineHelpEnemy}
+                >
+                  <Text style={styles.modalButtonTextCancel}>No</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonConfirm]}
+                  onPress={handleHelpEnemy}
+                >
+                  <Text style={styles.modalButtonTextConfirm}>Yes</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
       {/* Battle Transition Modal */}
       <Modal visible={transitionVisible} animationType="none" transparent>
         <View style={styles.transitionContainer}>
@@ -917,8 +1161,13 @@ export default function Battle() {
             <View style={styles.playerCompanionContainer}>
               {activeCompanionId && (() => {
                 const activeCompanion = creatures.find(c => c.id === activeCompanionId);
-                if (!activeCompanion) return null;
-                const currentHealth = companionHealths[activeCompanionId] ?? getCompanionHealth(activeCompanionId);
+                if (!activeCompanion) {
+                  console.log('Companion not found for ID:', activeCompanionId);
+                  return null;
+                }
+                // Ensure health is initialized
+                const storedHealth = getCompanionHealth(activeCompanionId);
+                const currentHealth = companionHealths[activeCompanionId] ?? storedHealth ?? activeCompanion.baseStats.health;
                 const maxHealth = activeCompanion.baseStats.health;
                 const healthPercentage = maxHealth > 0 ? (currentHealth / maxHealth) * 100 : 0;
                 // Determine health bar color based on percentage
@@ -959,9 +1208,41 @@ export default function Battle() {
                         }}
                       >
                         <View style={{ position: 'relative' }}>
-                          <Image source={getCompanionImage(activeCompanion.image)} style={styles.companionStyle} />
+                          {(() => {
+                            if (!activeCompanionId || !activeCompanion) return null;
+                            
+                            const isDying = dyingCompanions.has(activeCompanionId);
+                            const deathAnim = deathAnimations.current[activeCompanionId];
+                            
+                            // Only apply death animation if companion is actually dying and has animation
+                            if (isDying && deathAnim) {
+                              return (
+                                <Animated.View
+                                  style={{
+                                    opacity: deathAnim.saturation,
+                                    transform: [
+                                      {
+                                        scale: deathAnim.scale,
+                                      },
+                                    ],
+                                  }}
+                                >
+                                  <Image source={getCompanionImage(activeCompanion.image)} style={styles.companionStyle} />
+                                </Animated.View>
+                              );
+                            }
+                            
+                            // Normal companion - fully visible, ensure it renders
+                            return (
+                              <Image 
+                                source={getCompanionImage(activeCompanion.image)} 
+                                style={styles.companionStyle}
+                                key={`companion-${activeCompanionId}`}
+                              />
+                            );
+                          })()}
                           {/* Red pulsing overlay when health is low */}
-                          {healthPercentage <= 15 && (
+                          {healthPercentage <= 15 && !dyingCompanions.has(activeCompanionId) && (
                             <Animated.View
                               style={[
                                 styles.redPulseOverlay,
@@ -1028,7 +1309,18 @@ export default function Battle() {
                     ],
                   }}
                 >
-                  <Image source={require('../companionImages/Wearywise.png')} style={styles.enemyCompanionStyle} />
+                  <Animated.View
+                    style={{
+                      opacity: enemyDying ? enemyDeathAnim.saturation : 1,
+                      transform: [
+                        {
+                          scale: enemyDying ? enemyDeathAnim.scale : 1,
+                        },
+                      ],
+                    }}
+                  >
+                    <Image source={require('../companionImages/Wearywise.png')} style={styles.enemyCompanionStyle} />
+                  </Animated.View>
                 </Animated.View>
               </Animated.View>
             </View>
