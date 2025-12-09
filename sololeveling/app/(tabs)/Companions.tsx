@@ -1,7 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView, Modal, PanResponder, Animated } from "react-native";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import creatures from "../data/companions.json";
+import { getTeamMembers, toggleTeamMember as toggleTeamMemberStore, subscribe } from "../lib/teamStore";
+import { getCompanionHealth, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
 import { Background } from "@react-navigation/elements";
 
 const getCompanionImage = (imageName: string) => {
@@ -32,7 +35,6 @@ const getElementalIndicator = (companionName: string) => {
     "Slumberpaw": require("../companionImages/icons/magic.png"),
     "Flitterfinch": require("../companionImages/icons/wind.png"),
     // Add more companions here as needed
-    // Options: Power.png, Elemental.png, Swift.png
   };
   return indicatorMap[companionName] || require("./companions_assets/Power.png");
 };
@@ -56,7 +58,6 @@ const getNavImageStyle = (companionName: string) => {
       height: "100%",
       transform: [{ translateX: -10 }, { translateY: 32 }, { scale: 2.3 }],
     },
-    // Wearywise positioning (for when added): transform: [{ translateX: 5 }, { translateY: 30 }, { scale: 2.3 }]
   };
   return imageStyles[companionName] || { width: "100%", height: "100%" };
 };
@@ -70,8 +71,80 @@ export default function Companions() {
   let maxLevelView, showAttackUpgrade, showHpUpgrade, showDefenseUpgrade;
   const [selectedCompanionId, setSelectedCompanionId] = useState<number>(userCompanions[0]?.id || 1);
   const [showFeedModal, setShowFeedModal] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<number[]>([]);
+  const [teamMembers, setTeamMembers] = useState<number[]>(getTeamMembers());
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Subscribe to team changes
+  useEffect(() => {
+    const unsubscribe = subscribe(() => {
+      setTeamMembers(getTeamMembers());
+    });
+    return unsubscribe;
+  }, []);
+
+  // Initialize health for all companions on mount
+  useEffect(() => {
+    userCompanions.forEach((c) => {
+      initializeHealth(c.id, c.baseStats.health);
+    });
+  }, []);
+
+  // Subscribe to health changes from battle
+  useEffect(() => {
+    const unsubscribe = subscribeHealth(() => {
+      // Update health for all companions from the store
+      setCompanionStats(prev => {
+        const updated = { ...prev };
+        userCompanions.forEach((c) => {
+          if (updated[c.id]) {
+            updated[c.id] = {
+              ...updated[c.id],
+              health: getCompanionHealth(c.id),
+            };
+          } else {
+            // If companion stats don't exist yet, create them
+            updated[c.id] = {
+              attack: c.baseStats.attack,
+              maxHp: c.baseStats.health,
+              defense: c.baseStats.defense,
+              health: getCompanionHealth(c.id),
+              hunger: c.name === "Flitterfinch" ? 0 : 65,
+            };
+          }
+        });
+        return updated;
+      });
+    });
+    return unsubscribe;
+  }, []);
+
+  // Refresh health from store when page comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      // Update health for all companions from the store when page is focused
+      setCompanionStats(prev => {
+        const updated = { ...prev };
+        userCompanions.forEach((c) => {
+          const storeHealth = getCompanionHealth(c.id);
+          if (updated[c.id]) {
+            updated[c.id] = {
+              ...updated[c.id],
+              health: storeHealth,
+            };
+          } else {
+            updated[c.id] = {
+              attack: c.baseStats.attack,
+              maxHp: c.baseStats.health,
+              defense: c.baseStats.defense,
+              health: storeHealth,
+              hunger: c.name === "Flitterfinch" ? 0 : 65,
+            };
+          }
+        });
+        return updated;
+      });
+    }, [])
+  );
   const [companionOrder, setCompanionOrder] = useState<number[]>(() => userCompanions.map(c => c.id));
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -85,11 +158,14 @@ export default function Companions() {
   const [companionStats, setCompanionStats] = useState<{ [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number; level: number;} }>(() => {
     const initial: { [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number; level: number; } } = {};
     userCompanions.forEach((c) => {
+      // Initialize health from store or use base health
+      initializeHealth(c.id, c.baseStats.health);
+      const storedHealth = getCompanionHealth(c.id);
       initial[c.id] = {
         attack: c.baseStats.attack,
         maxHp: c.baseStats.health,
         defense: c.baseStats.defense,
-        health: c.baseStats.health,
+        health: storedHealth, // Use health from store
         hunger: c.name === "Flitterfinch" ? 0 : 65, // Flitterfinch starts at 0 hunger
         level: c.baseStats.level,
       };
@@ -115,11 +191,17 @@ export default function Companions() {
   };
 
   const selectedCompanion = userCompanions.find((c) => c.id === selectedCompanionId) || userCompanions[0];
-  const stats = companionStats[selectedCompanionId] || {
+  // Always get the latest health from the store
+  const currentStats = companionStats[selectedCompanionId];
+  const storeHealth = getCompanionHealth(selectedCompanionId);
+  const stats = currentStats ? {
+    ...currentStats,
+    health: storeHealth, 
+  } : {
     attack: selectedCompanion?.baseStats.attack || 0,
     maxHp: selectedCompanion?.baseStats.health || 0,
     defense: selectedCompanion?.baseStats.defense || 0,
-    health: selectedCompanion?.baseStats.health || 0,
+    health: storeHealth || selectedCompanion?.baseStats.health || 0,
     hunger: 65,
     level: selectedCompanion?.baseStats.level || 0,
   };
@@ -147,18 +229,8 @@ export default function Companions() {
       return;
     }
     
-    setTeamMembers((prev) => {
-      if (prev.includes(companionId)) {
-        // Remove from team
-        return prev.filter((id) => id !== companionId);
-      } else {
-        // Add to team (max 3)
-        if (prev.length < 3) {
-          return [...prev, companionId];
-        }
-        return prev; // Already at max, don't add
-      }
-    });
+    // Use the teamStore function
+    toggleTeamMemberStore(companionId);
   };
 
   const moveCompanion = (fromIndex: number, toIndex: number) => {
@@ -175,7 +247,6 @@ export default function Companions() {
     return PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        // Start dragging after a small movement
         return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
       },
       onPanResponderGrant: () => {
@@ -185,9 +256,9 @@ export default function Companions() {
         setDragPosition({ x: gestureState.moveX, y: gestureState.moveY });
         
         // Find which item we're hovering over
-        const buttonWidth = 60; // navButton width
-        const buttonGap = 8; // gap between buttons
-        const scrollOffset = 0; // You might need to track scroll position
+        const buttonWidth = 60; 
+        const buttonGap = 8; 
+        const scrollOffset = 0; 
         const hoverIndex = Math.floor((gestureState.moveX - scrollOffset) / (buttonWidth + buttonGap));
         
         if (hoverIndex >= 0 && hoverIndex < companionOrder.length && hoverIndex !== index) {
@@ -364,14 +435,13 @@ export default function Companions() {
         <View style={styles.companionDetails}>
           <View style={styles.companionImageContainer}>
             {/* Background Image */}
-            {/* Adjust blur here: blurRadius={3} - higher number = more blur */}
             <Image
               source={getCompanionBackground(selectedCompanion.name)}
               style={styles.companionBackground}
               resizeMode="cover"
               blurRadius={5}
             />
-            {/* Black Overlay - Adjust opacity in styles.backgroundOverlay (0.7 = 70% opacity) */}
+            {/* Black Overlay*/}
             <View style={styles.backgroundOverlay} />
             
             {/* 3 Dots Menu Button */}
@@ -760,7 +830,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    // Adjust opacity here: 0.7 = 70% opacity (0.0 = transparent, 1.0 = fully opaque)
     backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   maxLevelIndicator: {
@@ -1003,7 +1072,7 @@ const styles = StyleSheet.create({
   },
   menuContent: {
     position: "absolute",
-    top: 225, // Position below the menu button (button top: 12 + height: 40 + spacing: 4)
+    top: 225, 
     right: 12,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
