@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Text, View, StyleSheet, Pressable, Image, Modal, ImageBackground, Animated, ScrollView, Dimensions, PanResponder, TouchableOpacity} from "react-native";
+import { Text, View, StyleSheet, Pressable, Image, Modal, ImageBackground, Animated, ScrollView, Dimensions, PanResponder, TouchableOpacity, Platform} from "react-native";
 import { Ionicons, FontAwesome5, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
@@ -1514,7 +1514,7 @@ const styles = StyleSheet.create({
   },
   battleContent: {
     flex: 1,
-    backgroundColor: "#000000", // Fallback color for empty space
+    backgroundColor: "transparent",
   },
   backgroundImageStyle: {
     width: "100%",
@@ -1522,15 +1522,15 @@ const styles = StyleSheet.create({
   },
   tickhareContainer: {
     position: "absolute",
-    width: screenWidth * 0.6, // 30% of screen width - CHANGE SIZE HERE
-    left: screenWidth * 0.01, // 10% from left - CHANGE POSITION HERE
-    top: screenHeight * 0.34, // 30% from top - CHANGE POSITION HERE
+    width: SCREEN_WIDTH * 0.6, // 30% of screen width - CHANGE SIZE HERE
+    left: SCREEN_WIDTH * 0.01, // 10% from left - CHANGE POSITION HERE
+    top: SCREEN_HEIGHT * 0.34, // 30% from top - CHANGE POSITION HERE
   },
   wearywiseContainer: {
     position: "absolute",
-    width: screenWidth * 0.4, // 30% of screen width - CHANGE SIZE HERE
-    right: screenWidth * 0.15, // 10% from right - CHANGE POSITION HERE
-    top: screenHeight * 0.12, // 30% from top - CHANGE POSITION HERE
+    width: SCREEN_WIDTH * 0.4, // 30% of screen width - CHANGE SIZE HERE
+    right: SCREEN_WIDTH * 0.15, // 10% from right - CHANGE POSITION HERE
+    top: SCREEN_HEIGHT * 0.12, // 30% from top - CHANGE POSITION HERE
   },
   rpsButtonContainer: {
     position: "absolute",
