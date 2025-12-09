@@ -2,22 +2,31 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getTasks, subscribe, Task, toggleTask } from "../lib/taskStore";
+import { getTasks, subscribe, Task, toggleTask, getActionPoints, getDailyCompletions, hax } from "../lib/taskStore";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(getTasks());
+  const [ap, setAp] = useState<number>(getActionPoints());
+  const [dailyCompletions, setDailyCompletions] = useState<number>(getDailyCompletions());
   const [notCompletedCollapsed, setNotCompletedCollapsed] = useState(false);
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
 
   useEffect(() => {
-    const unsub = subscribe(() => setTasks(getTasks()));
+    const unsub = subscribe(() => {
+      setTasks(getTasks());
+      setAp(getActionPoints());
+      setDailyCompletions(getDailyCompletions());
+    });
     return unsub;
   }, []);
 
   const completedTasks = tasks.filter(t => t.completed);
   const notCompletedTasks = tasks.filter(t => !t.completed);
-  const progress = `${completedTasks.length}/${tasks.length}`;
-  const progressPercentage = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
+  const dailyGoal = 10;
+  const completedCount = Math.min(dailyCompletions, dailyGoal);
+  const progress = `${completedCount}/${dailyGoal}`;
+  const progressPercentage = (completedCount / dailyGoal) * 100;
+  const isProgressComplete = completedCount >= dailyGoal;
 
   const getTimeRemaining = (deadline?: string) => {
     if (!deadline) return null;
@@ -30,10 +39,15 @@ export default function Tasks() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.mainTitle}>Tasks</Text>
+      <View style={styles.apContainer}>
+        <Ionicons name="flash" size={16} color="#F59E0B" />
+        <Text style={styles.apText}>{ap}</Text>
+      </View>
       
       <View style={styles.bossTaskSection}>
-        <Text style={styles.bossTaskTitle}>Boss Battle</Text>
+        <Pressable onLongPress={hax}>
+          <Text style={styles.bossTaskTitle}>Boss Battle</Text>
+        </Pressable>
         <Text style={styles.bossTaskDesc}>Complete All Daily Tasks</Text>
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
@@ -43,8 +57,8 @@ export default function Tasks() {
             </View>
           </View>
         </View>
-        <TouchableOpacity style={styles.claimButton}>
-          <Text style={styles.claimButtonText}>Claim Reward!</Text>
+        <TouchableOpacity style={[styles.claimButton, isProgressComplete && styles.claimButtonActive]}>
+          <Text style={[styles.claimButtonText, isProgressComplete && styles.claimButtonTextActive]}>Battle!</Text>
         </TouchableOpacity>
       </View>
 
@@ -77,7 +91,7 @@ export default function Tasks() {
               )}
             </View>
             <View style={styles.taskCheckbox}>
-              <Ionicons name="checkmark-circle-outline" size={28} color="#007AFF" />
+              <Ionicons name="ellipse-outline" size={28} color="#007AFF" />
             </View>
           </TouchableOpacity>
         ))}
@@ -124,19 +138,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+    paddingTop: 60,
   },
-  mainTitle: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#000000",
-    textAlign: "center",
-    marginTop: 60,
-    marginBottom: 20,
+  apContainer: {
+    position: "absolute",
+    top: 55,
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 100,
+  },
+  apText: {
+    color: "#B45309",
+    fontWeight: "800",
+    fontSize: 14,
+    marginLeft: 4,
   },
   bossTaskSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     marginHorizontal: 20,
+    marginTop: 8,
     backgroundColor: "#F9F9F9",
     borderRadius: 12,
     marginBottom: 24,
@@ -191,10 +224,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
   },
+  claimButtonActive: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
   claimButtonText: {
     color: "#666666",
     fontSize: 14,
     fontWeight: "500",
+  },
+  claimButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   scrollView: {
     flex: 1,
@@ -265,10 +306,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   completedCheckbox: {
-    backgroundColor: "#4CAF50",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
   },
   bottomButton: {
     backgroundColor: "#007AFF",

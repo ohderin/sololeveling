@@ -1514,6 +1514,80 @@ const styles = StyleSheet.create({
   },
   battleContent: {
     flex: 1,
+    backgroundColor: "#000000", // Fallback color for empty space
+  },
+  backgroundImageStyle: {
+    width: "100%",
+    height: "100%",
+  },
+  tickhareContainer: {
+    position: "absolute",
+    width: screenWidth * 0.6, // 30% of screen width - CHANGE SIZE HERE
+    left: screenWidth * 0.01, // 10% from left - CHANGE POSITION HERE
+    top: screenHeight * 0.34, // 30% from top - CHANGE POSITION HERE
+  },
+  wearywiseContainer: {
+    position: "absolute",
+    width: screenWidth * 0.4, // 30% of screen width - CHANGE SIZE HERE
+    right: screenWidth * 0.15, // 10% from right - CHANGE POSITION HERE
+    top: screenHeight * 0.12, // 30% from top - CHANGE POSITION HERE
+  },
+  rpsButtonContainer: {
+    position: "absolute",
+    bottom: 80, // Above navbar (adjust based on navbar height)
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "flex-end",
+    zIndex: 2000, // Higher than creatures
+    paddingHorizontal: 20,
+  },
+  rpsButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginHorizontal: 15,
+    borderWidth: 3,
+    ...(Platform.select({
+      web: {
+        boxShadow: "0px 4px 5px rgba(0, 0, 0, 0.3)",
+      } as any,
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+      },
+    })),
+    elevation: 8, // Android shadow
+    overflow: "hidden", // Important for gradient to respect border radius
+    position: "relative",
+  },
+  rpsButtonRedBorder: {
+    borderColor: "#AA0000", // Dark red border
+  },
+  rpsButtonBlueBorder: {
+    borderColor: "#0000AA", // Dark blue border
+  },
+  rpsButtonGreenBorder: {
+    borderColor: "#00AA00", // Dark green border
+  },
+  rpsButtonSvg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+  rpsButtonHigher: {
+    bottom: 0, // Middle button at base level
+  },
+  rpsButtonLower: {
+    bottom: -20, // Red and green buttons 20px lower
+  },
+  rpsButtonImageContainer: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
