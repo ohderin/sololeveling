@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
+import { Audio } from "expo-av";
 import { View, StyleSheet, ImageBackground, Dimensions, TouchableOpacity, Image, Animated } from "react-native";
 import { useFonts, Jaro_400Regular } from "@expo-google-fonts/jaro";
-import { Audio } from "expo-av";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
