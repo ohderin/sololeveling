@@ -51,7 +51,7 @@ export const setEquippedCompanionId = (id: number) => {
   listeners.forEach((l) => l());
 };
 
-// Re-export AP functions from apStore for backward compatibility
+// re-export AP functions
 export const getActionPoints = getAP;
 export const addActionPoints = addAP;
 export const spendActionPoints = spendAP;
@@ -81,6 +81,6 @@ export const getDailyCompletions = (): number => {
 };
 export const hax = () => {
   dailyBonus = 10;
-  addAP(10); // Also add 10 AP for testing
+  addAP(10);
   listeners.forEach((l) => l());
 };

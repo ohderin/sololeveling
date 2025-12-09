@@ -13,14 +13,14 @@ export default function Tasks() {
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
 
   useEffect(() => {
-    // Subscribe to task store changes
+    // task store listener
     const unsubTasks = subscribe(() => {
       setTasks(getTasks());
       setAp(getActionPoints());
       setDailyCompletions(getDailyCompletions());
     });
     
-    // Subscribe to AP store changes (for when AP is spent on other screens)
+    // ap store listener
     const unsubAP = subscribeToAP(() => {
       setAp(getActionPoints());
     });

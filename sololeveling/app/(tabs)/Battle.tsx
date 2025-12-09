@@ -22,7 +22,7 @@ export default function Battle() {
   const targetVolume = 0.05; // Target volume when unmuted
   const tickharePosition = useRef(new Animated.Value(0)).current; // Animation value for Tickhare position
 
-  // Subscribe to AP changes
+  // ap changes listener
   useEffect(() => {
     const unsub = subscribeToAP(() => {
       setAp(getActionPoints());
@@ -30,7 +30,7 @@ export default function Battle() {
     return unsub;
   }, []);
 
-  // Show "Not enough AP" warning for 1 second
+  // ap 0 warning
   const showAPWarning = () => {
     setShowNoAPWarning(true);
     setTimeout(() => {
@@ -101,9 +101,8 @@ export default function Battle() {
     ]).start();
   };
 
-  // Handle button press - spend AP, play sound and animate
   const handleButtonPress = (action: string) => {
-    // Check and spend AP before attacking
+    // check and spend AP before attacking
     if (!spendAPForAttack()) {
       showAPWarning();
       return;
