@@ -1,6 +1,5 @@
 import React from "react";
-import { View, StyleSheet, Image, Text, ImageSourcePropType } from "react-native";
-import { Jaro_400Regular } from "@expo-google-fonts/jaro";
+import { View, StyleSheet, Image, Text, ImageSourcePropType, Platform } from "react-native";
 
 interface BattleCharacterProps {
   imageSource: ImageSourcePropType;
@@ -12,10 +11,10 @@ interface BattleCharacterProps {
   healthBarColor?: string;
   showHealthNumbers?: boolean; // Show health numbers (e.g., "100/100")
   elementalPosition?: {
-    top?: number | string;
-    right?: number | string;
-    bottom?: number | string;
-    left?: number | string;
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
   }; // Position for elemental indicator (overlaps image)
 }
 
@@ -70,10 +69,10 @@ const BattleCharacter: React.FC<BattleCharacterProps> = ({
             <View style={[
               styles.elementalContainer,
               {
-                top: elementalPosition.top,
-                right: elementalPosition.right,
-                bottom: elementalPosition.bottom,
-                left: elementalPosition.left,
+                ...(elementalPosition.top !== undefined && { top: elementalPosition.top }),
+                ...(elementalPosition.right !== undefined && { right: elementalPosition.right }),
+                ...(elementalPosition.bottom !== undefined && { bottom: elementalPosition.bottom }),
+                ...(elementalPosition.left !== undefined && { left: elementalPosition.left }),
               }
             ]}>
               {typeof elementalIndicator === "string" ? (
@@ -104,9 +103,16 @@ const styles = StyleSheet.create({
     fontFamily: "Jaro_400Regular",
     color: "#FFFFFF",
     marginBottom: 5,
-    textShadowColor: "#000000",
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 3,
+    ...(Platform.select({
+      web: {
+        textShadow: "2px 2px 3px #000000",
+      } as any,
+      default: {
+        textShadowColor: "#000000",
+        textShadowOffset: { width: 2, height: 2 },
+        textShadowRadius: 3,
+      },
+    })),
     fontWeight: "400",
   },
   imageContainer: {
@@ -159,9 +165,16 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginTop: 3,
     fontFamily: "Jaro_400Regular",
-    textShadowColor: "#000000",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    ...(Platform.select({
+      web: {
+        textShadow: "1px 1px 2px #000000",
+      } as any,
+      default: {
+        textShadowColor: "#000000",
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
+      },
+    })),
     fontWeight: "400",
   },
 });

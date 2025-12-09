@@ -1,65 +1,12 @@
-import React, { useRef, useState } from "react";
-import { Audio } from "expo-av";
-import { View, StyleSheet, ImageBackground, Dimensions, TouchableOpacity, Image, Animated } from "react-native";
-import { useFonts, Jaro_400Regular } from "@expo-google-fonts/jaro";
-import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useRef } from "react";
+import { View, StyleSheet, ImageBackground, Dimensions, TouchableOpacity, Image, Animated, Platform } from "react-native";
 import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
 import BattleCharacter from "../components/BattleCharacter";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function Battle() {
-  const [fontsLoaded] = useFonts({
-    Jaro_400Regular,
-  });
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const hitSoundRef = useRef<Audio.Sound | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const targetVolume = 0.05; // Target volume when unmuted
   const tickharePosition = useRef(new Animated.Value(0)).current; // Animation value for Tickhare position
-
-  // Fade in audio
-  const fadeIn = async (sound: Audio.Sound, duration: number = 1000) => {
-    try {
-      const steps = 20;
-      const stepDuration = duration / steps;
-      
-      for (let i = 0; i <= steps; i++) {
-        await new Promise(resolve => setTimeout(resolve, stepDuration));
-        
-        // debug and check if sound is loaded
-        const status = await sound.getStatusAsync();
-        if (!status.isLoaded) {
-          console.log("Sound was unloaded during fade in");
-          return;
-        }
-        
-        const volume = (i / steps) * targetVolume;
-        await sound.setVolumeAsync(volume);
-      }
-    } catch (error) {
-      console.error("Error during fade in:", error);
-    }
-  };
-
-  // Play hit sound effect
-  const playHitSound = async () => {
-    try {
-      if (!hitSoundRef.current) {
-        const { sound } = await Audio.Sound.createAsync(
-          require("../barena_assets/hit.mp3"),
-          { volume: 0.1 }
-        );
-        hitSoundRef.current = sound;
-      }
-      
-      // Reset and play the sound
-      await hitSoundRef.current.replayAsync();
-    } catch (error) {
-      console.error("Error playing hit sound:", error);
-    }
-  };
 
   // Animate Tickhare attack (move right and back)
   const animateTickhareAttack = () => {
@@ -82,146 +29,11 @@ export default function Battle() {
     ]).start();
   };
 
-  // Handle button press - play sound and animate
+  // Handle button press - animate
   const handleButtonPress = (action: string) => {
     console.log(`${action} selected`);
-    playHitSound();
     animateTickhareAttack();
   };
-
-  // Toggle volume on/off
-  const toggleVolume = async () => {
-    if (!soundRef.current) return;
-    
-    try {
-      const status = await soundRef.current.getStatusAsync();
-      if (!status.isLoaded) return;
-
-      if (isMuted) {
-        // Unmute - fade in to target volume
-        await soundRef.current.setVolumeAsync(0);
-        const steps = 20;
-        const duration = 500; // Quick fade in
-        const stepDuration = duration / steps;
-        
-        for (let i = 0; i <= steps; i++) {
-          await new Promise(resolve => setTimeout(resolve, stepDuration));
-          const volume = (i / steps) * targetVolume;
-          await soundRef.current.setVolumeAsync(volume);
-        }
-        setIsMuted(false);
-      } else {
-        // Mute - fade out to 0
-        const currentVolume = status.volume || targetVolume;
-        const steps = 20;
-        const duration = 500; // Quick fade out
-        const stepDuration = duration / steps;
-        
-        for (let i = steps; i >= 0; i--) {
-          await new Promise(resolve => setTimeout(resolve, stepDuration));
-          const volume = (i / steps) * currentVolume;
-          await soundRef.current.setVolumeAsync(volume);
-        }
-        setIsMuted(true);
-      }
-    } catch (error) {
-      console.error("Error toggling volume:", error);
-    }
-  };
-
-  // Fade out audio
-  const fadeOut = async (sound: Audio.Sound, duration: number = 1000) => {
-    try {
-      const currentStatus = await sound.getStatusAsync();
-      if (!currentStatus.isLoaded) return;
-      
-      const currentVolume = currentStatus.volume || 0.25;
-      const steps = 20;
-      const stepDuration = duration / steps;
-      
-      for (let i = steps; i >= 0; i--) {
-        await new Promise(resolve => setTimeout(resolve, stepDuration));
-        
-        // debug and check if sound is loaded
-        const status = await sound.getStatusAsync();
-        if (!status.isLoaded) {
-          console.log("Sound was unloaded during fade out");
-          return;
-        }
-        
-        const volume = (i / steps) * currentVolume;
-        await sound.setVolumeAsync(volume);
-      }
-      
-      const finalStatus = await sound.getStatusAsync();
-      if (finalStatus.isLoaded) {
-        await sound.stopAsync();
-      }
-    } catch (error) {
-      console.error("Error during fade out:", error);
-    }
-  };
-
-  // Load and play audio when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      let isMounted = true;
-
-      const loadAndPlayAudio = async () => {
-        try {
-          // Set audio mode
-          await Audio.setAudioModeAsync({
-            playsInSilentModeIOS: true,
-            staysActiveInBackground: false,
-          });
-
-          // Load the sound
-          const { sound } = await Audio.Sound.createAsync(
-            require("../barena_assets/Elona_OST_Battle_2.mp3"),
-            { shouldPlay: true, isLooping: true, volume: 0 }
-          );
-
-          if (isMounted) {
-            soundRef.current = sound;
-            // Start fade in
-            fadeIn(sound);
-          }
-        } catch (error) {
-          console.error("Error loading audio:", error);
-        }
-      };
-
-      loadAndPlayAudio();
-
-      // Cleanup function - fade out when leaving
-      return () => {
-        isMounted = false;
-        if (soundRef.current) {
-          fadeOut(soundRef.current).then(() => {
-            soundRef.current?.unloadAsync().catch(err => {
-              console.error("Error unloading sound:", err);
-            });
-            soundRef.current = null;
-          }).catch(err => {
-            console.error("Error during fade out cleanup:", err);
-            // attempt unload at fade out failure
-            soundRef.current?.unloadAsync().catch(() => {});
-            soundRef.current = null;
-          });
-        }
-        if (hitSoundRef.current) {
-          hitSoundRef.current.unloadAsync().catch(err => {
-            console.error("Error unloading hit sound:", err);
-          });
-          hitSoundRef.current = null;
-        }
-      };
-    }, [])
-  );
-
-  if (!fontsLoaded) {
-    return null;
-  }
 
   return (
     <ImageBackground 
@@ -230,19 +42,6 @@ export default function Battle() {
       resizeMode="contain"
       imageStyle={styles.backgroundImageStyle}
     >
-      {/* Volume Toggle Button - Top Left */}
-      <TouchableOpacity 
-        style={styles.volumeButton}
-        onPress={toggleVolume}
-        activeOpacity={0.7}
-      >
-        <Ionicons 
-          name={isMuted ? "volume-mute" : "volume-high"} 
-          size={28} 
-          color="#FFFFFF" 
-        />
-      </TouchableOpacity>
-
       {/* Tickhare - Player's creature (reflected over y-axis, flipped horizontally) */}
       <Animated.View 
         style={[
@@ -356,20 +155,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  volumeButton: {
-    position: "absolute",
-    top: 35,
-    left: 10,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
   tickhareContainer: {
     position: "absolute",
     width: screenWidth * 0.6, // 30% of screen width - CHANGE SIZE HERE
@@ -399,10 +184,17 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     marginHorizontal: 15,
     borderWidth: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    ...(Platform.select({
+      web: {
+        boxShadow: "0px 4px 5px rgba(0, 0, 0, 0.3)",
+      } as any,
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+      },
+    })),
     elevation: 8, // Android shadow
     overflow: "hidden", // Important for gradient to respect border radius
     position: "relative",
