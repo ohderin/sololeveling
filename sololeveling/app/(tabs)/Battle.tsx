@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Text, View, StyleSheet, Pressable, Image, Modal, ImageBackground, Animated, ScrollView, Dimensions, PanResponder} from "react-native";
+import { Text, View, StyleSheet, Pressable, Image, Modal, ImageBackground, Animated, ScrollView, Dimensions, PanResponder, TouchableOpacity} from "react-native";
 import { Ionicons, FontAwesome5, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
-import { getTeamMembers, subscribe } from "../lib/teamStore";
+import { getTeamMembers, subscribe, toggleTeamMember, addTeamMember, removeTeamMember } from "../lib/teamStore";
 import { getCompanionHealth, setCompanionHealth, takeCompanionDamage, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
+import { getTasks, subscribe as subscribeTasks, Task } from "../lib/taskStore";
 import creatures from "../data/companions.json";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -20,6 +21,11 @@ const getCompanionImage = (imageName: string) => {
   return imageMap[imageName] || require("../companionImages/aron.png");
 };
 
+// Filter to only show companions the user has
+const userCompanions = creatures.filter(
+  (c) => c.name === "Tickhare" || c.name === "Slumberpaw" || c.name === "Flitterfinch"
+);
+
 export default function Battle() {
   const [result, setResult] = useState("");
   const [enemyHealth, setEnemyHealth] = useState(100);
@@ -27,6 +33,7 @@ export default function Battle() {
   const [battleModalVisible, setBattleModalVisible] = useState(false);
   const [transitionVisible, setTransitionVisible] = useState(false);
   const [teamModalVisible, setTeamModalVisible] = useState(false);
+  const [showFleeModal, setShowFleeModal] = useState(false);
   const [selectedMove, setSelectedMove] = useState<string | null>(null);
   const [enemyMove, setEnemyMove] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<number[]>(getTeamMembers());
@@ -34,6 +41,8 @@ export default function Battle() {
   const [battleStarted, setBattleStarted] = useState(false);
   const [showCreatureSelect, setShowCreatureSelect] = useState(false);
   const [activeCompanionId, setActiveCompanionId] = useState<number | null>(teamMembers[0] || null);
+  const [selectedTeamSlot, setSelectedTeamSlot] = useState<number | null>(null);
+  const [tasks, setTasks] = useState<Task[]>(getTasks());
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -47,7 +56,12 @@ export default function Battle() {
   const playerHitAnim = useRef(new Animated.Value(0)).current;
   const enemyHitAnim = useRef(new Animated.Value(0)).current;
   const tackleSound = useAudioPlayer(require('../../assets/sounds/Tackle.mp3'));
+  const battleMusic = useAudioPlayer(require('../../assets/sounds/Battle.mp3'));
+  const battleMusicVolumeAnim = useRef(new Animated.Value(0)).current;
   const redPulseAnim = useRef(new Animated.Value(0)).current;
+  
+
+  const MAX_VOLUME = 0.05;
 
   // Start pulsing animation when health is low
   useEffect(() => {
@@ -100,6 +114,14 @@ export default function Battle() {
     return unsubscribe;
   }, [activeCompanionId]);
 
+  // Subscribe to task changes
+  useEffect(() => {
+    const unsubscribe = subscribeTasks(() => {
+      setTasks(getTasks());
+    });
+    return unsubscribe;
+  }, []);
+
   // Animate when battle modal opens
   useEffect(() => {
     if (battleModalVisible) {
@@ -117,6 +139,55 @@ export default function Battle() {
       }
     }
   }, [battleModalVisible, teamMembers, activeCompanionId]);
+
+  // Play battle music with fade in/out when battle modal opens/closes
+  useEffect(() => {
+    if (battleModalVisible) {
+      // Start with volume at 0 and fade in
+      battleMusicVolumeAnim.setValue(0);
+      battleMusic.loop = true;
+      battleMusic.volume = 0;
+      battleMusic.play();
+      
+      // Fade in over 1 second
+      Animated.timing(battleMusicVolumeAnim, {
+        toValue: MAX_VOLUME,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+      
+      // Update volume based on animation value
+      const listener = battleMusicVolumeAnim.addListener(({ value }) => {
+        battleMusic.volume = value;
+      });
+      
+      return () => {
+        battleMusicVolumeAnim.removeListener(listener);
+      };
+    } else {
+      // Fade out over 0.5 seconds
+      Animated.timing(battleMusicVolumeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: false,
+      }).start(() => {
+        // Pause after fade out completes
+        battleMusic.pause();
+        battleMusic.volume = 0;
+      });
+      
+      // Update volume during fade out
+      const listener = battleMusicVolumeAnim.addListener(({ value }) => {
+        battleMusic.volume = value;
+      });
+      
+      return () => {
+        battleMusicVolumeAnim.removeListener(listener);
+        battleMusic.pause();
+        battleMusic.volume = 0;
+      };
+    }
+  }, [battleModalVisible]);
 
   // Transition animation sequence
   const startBattleTransition = () => {
@@ -238,6 +309,11 @@ export default function Battle() {
   };
 
   const handleFlee = () => {
+    setShowFleeModal(true);
+  };
+
+  const confirmFlee = () => {
+    setShowFleeModal(false);
     setBattleModalVisible(false);
     setBattleStarted(false);
     setSelectedMove(null);
@@ -247,6 +323,40 @@ export default function Battle() {
       healths[id] = getCompanionHealth(id);
     });
     setCompanionHealths(healths);
+  };
+
+  const setCompanionAtSlot = (slotIndex: number, companionId: number | null) => {
+    const currentTeam = [...teamMembers];
+    const companionAtSlot = currentTeam[slotIndex];
+    
+    // If setting to null, just remove the companion at that slot
+    if (companionId === null) {
+      if (companionAtSlot) {
+        removeTeamMember(companionAtSlot);
+      }
+      return;
+    }
+    
+    // If the companion is already at this slot, remove it
+    if (companionAtSlot === companionId) {
+      removeTeamMember(companionId);
+      return;
+    }
+    
+    // Remove companion from current slot if exists
+    if (companionAtSlot) {
+      removeTeamMember(companionAtSlot);
+    }
+    
+    // If companion is already in team elsewhere, remove it first
+    const existingIndex = currentTeam.indexOf(companionId);
+    if (existingIndex !== -1) {
+      removeTeamMember(companionId);
+    }
+    
+    // Add the companion (it will be added to the end, but that's okay)
+    // The UI will show teamMembers[0], teamMembers[1], teamMembers[2] regardless of order
+    addTeamMember(companionId);
   };
 
   const handleCreatureSelect = () => {
@@ -483,7 +593,10 @@ export default function Battle() {
                   <Pressable 
                     key={index}
                     style={styles.teamButton} 
-                    onPress={() => setTeamModalVisible(true)}
+                    onPress={() => {
+                      setSelectedTeamSlot(index);
+                      setTeamModalVisible(true);
+                    }}
                   >
                     {companion ? (
                       <Image 
@@ -503,7 +616,24 @@ export default function Battle() {
               <Text style={styles.warningText}>Please select atleast one companion!</Text>
             )}
 
-            <Pressable style={styles.startBattleButton} onPress={startBattleTransition}>
+            <Pressable 
+              style={[
+                styles.startBattleButton,
+                (() => {
+                  const completedDailyTasks = tasks.filter(task => 
+                    task.completed && task.duration === "daily"
+                  );
+                  return completedDailyTasks.length < 3 ? styles.startBattleButtonDisabled : null;
+                })()
+              ]} 
+              onPress={startBattleTransition}
+              disabled={(() => {
+                const completedDailyTasks = tasks.filter(task => 
+                  task.completed && task.duration === "daily"
+                );
+                return completedDailyTasks.length < 3;
+              })()}
+            >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Text style={{ color: "white", fontSize: 18 }}>Start Battle</Text>
                 <MaterialCommunityIcons name="sword-cross" size={20} color="white" />
@@ -511,15 +641,165 @@ export default function Battle() {
             </Pressable>
           </View>
         </View>
+        
+        {/* Battle Lock Overlay */}
+        {(() => {
+          // Calculate today's completed tasks (daily tasks that are completed)
+          const completedDailyTasks = tasks.filter(task => 
+            task.completed && task.duration === "daily"
+          );
+          const completedCount = completedDailyTasks.length;
+          const isLocked = completedCount < 3;
+          
+          if (isLocked) {
+            return (
+              <View style={styles.battleLockOverlay}>
+                <View style={styles.battleLockContent}>
+                  <Ionicons name="lock-closed" size={80} color="#FFFFFF" />
+                  <Text style={styles.battleLockText}>
+                    Complete {completedCount}/3 tasks today to unlock battle encounter
+                  </Text>
+                </View>
+              </View>
+            );
+          }
+          return null;
+        })()}
       </ImageBackground>
 
-        <Modal visible={teamModalVisible} animationType="slide" transparent onRequestClose={() => setTeamModalVisible(false)}>
-          <View style={styles.backdrop}>
-            <View style={styles.bottomSheet}>
-              <Text style={{ margin: 16 }}>Select Your Team</Text>
-              <Pressable onPress={() => setTeamModalVisible(false)} style={{ padding: 16 }}>
-                <Text>Close</Text>
-              </Pressable>
+        <Modal visible={teamModalVisible} animationType="slide" transparent onRequestClose={() => {
+          setTeamModalVisible(false);
+          setSelectedTeamSlot(null);
+        }}>
+          <Pressable 
+            style={styles.backdrop}
+            onPress={() => {
+              setTeamModalVisible(false);
+              setSelectedTeamSlot(null);
+            }}
+          >
+            <Pressable 
+              style={styles.bottomSheet}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.bottomSheetHeader}>
+                <View>
+                  <Text style={styles.bottomSheetTitle}>Select Your Team</Text>
+                  <Text style={styles.teamCountText}>
+                    {teamMembers.length} / 3 selected
+                  </Text>
+                </View>
+                <Pressable onPress={() => {
+                  setTeamModalVisible(false);
+                  setSelectedTeamSlot(null);
+                }} style={styles.closeButton}>
+                  <Ionicons name="close" size={24} color="#333" />
+                </Pressable>
+              </View>
+              <ScrollView 
+                contentContainerStyle={styles.companionSelectGrid}
+                showsVerticalScrollIndicator={false}
+              >
+                {userCompanions.map((companion) => {
+                  const isInTeam = teamMembers.includes(companion.id);
+                  const isSelected = selectedTeamSlot !== null && teamMembers[selectedTeamSlot] === companion.id;
+                  const isDisabled = !isInTeam && teamMembers.length >= 3 && selectedTeamSlot === null;
+                  
+                  return (
+                    <Pressable
+                      key={companion.id}
+                      style={[
+                        styles.companionProfileCircle,
+                        isInTeam && styles.companionProfileCircleSelected,
+                        isSelected && styles.companionProfileCircleActive,
+                        isDisabled && styles.companionProfileCircleDisabled
+                      ]}
+                      disabled={isDisabled}
+                      onPress={() => {
+                        if (selectedTeamSlot !== null) {
+                          // If a slot is selected, replace that slot
+                          const currentCompanionInSlot = teamMembers[selectedTeamSlot];
+                          if (currentCompanionInSlot === companion.id) {
+                            // Remove if clicking the same companion
+                            setCompanionAtSlot(selectedTeamSlot, null);
+                          } else {
+                            // Set companion at the selected slot
+                            setCompanionAtSlot(selectedTeamSlot, companion.id);
+                          }
+                          // Don't close modal - allow multiple selections
+                          // Move to next available slot or clear selection
+                          if (selectedTeamSlot < 2 && teamMembers.length < 3) {
+                            // Auto-advance to next empty slot
+                            const nextSlot = selectedTeamSlot + 1;
+                            if (!teamMembers[nextSlot]) {
+                              setSelectedTeamSlot(nextSlot);
+                            } else {
+                              setSelectedTeamSlot(null);
+                            }
+                          } else {
+                            setSelectedTeamSlot(null);
+                          }
+                        } else {
+                          // Toggle companion in/out of team (up to 3)
+                          if (isInTeam) {
+                            // Remove from team
+                            toggleTeamMember(companion.id);
+                          } else if (teamMembers.length < 3) {
+                            // Add to team if under limit
+                            toggleTeamMember(companion.id);
+                          }
+                          // Modal stays open for multiple selections
+                        }
+                      }}
+                    >
+                      <Image
+                        source={getCompanionImage(companion.image)}
+                        style={[
+                          styles.companionProfileImage,
+                          isDisabled && styles.companionProfileImageDisabled
+                        ]}
+                        resizeMode="contain"
+                      />
+                      {isInTeam && (
+                        <View style={styles.teamBadge}>
+                          <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Flee Confirmation Modal */}
+        <Modal
+          visible={showFleeModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowFleeModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Are you sure you want to flee?</Text>
+              <Text style={styles.modalText}>
+                The enemy will regain their health, but you can try again.
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => setShowFleeModal(false)}
+                >
+                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonConfirm]}
+                  onPress={confirmFlee}
+                >
+                  <Text style={styles.modalButtonTextConfirm}>Flee</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -634,9 +914,6 @@ export default function Battle() {
             resizeMode="cover"
           >
             <Animated.View style={[styles.battleContent, { opacity: fadeAnim }]}>
-            <Pressable style={{ position: "absolute", top: 40, left: 20, zIndex: 10 }} onPress={() => setBattleModalVisible(false)}>
-              <Ionicons name="arrow-back-outline" size={35} color="white" />
-            </Pressable>
             <View style={styles.playerCompanionContainer}>
               {activeCompanionId && (() => {
                 const activeCompanion = creatures.find(c => c.id === activeCompanionId);
@@ -1182,6 +1459,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: "center",
   },
+  startBattleButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: "#666",
+    borderColor: "#666",
+  },
   backdrop: {
     position: "absolute",
     flex: 1,
@@ -1190,10 +1472,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   bottomSheet: {
     width: "100%",
-    height: "50%",
+    height: "70%",
     backgroundColor: "white",
     borderTopRightRadius: 20,
     borderTopLeftRadius: 20,
@@ -1201,6 +1484,76 @@ const styles = StyleSheet.create({
     borderTopWidth: 3,
     borderLeftWidth: 3,
     borderRightWidth: 3,
+    paddingBottom: 20,
+  },
+  bottomSheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+  },
+  bottomSheetTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#333",
+  },
+  teamCountText: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  companionSelectGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    padding: 16,
+    gap: 20,
+  },
+  companionProfileCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#F5F5F5",
+    borderWidth: 3,
+    borderColor: "#E0E0E0",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    position: "relative",
+  },
+  companionProfileCircleSelected: {
+    borderColor: "#4CAF50",
+    borderWidth: 4,
+  },
+  companionProfileCircleActive: {
+    borderColor: "#2196F3",
+    borderWidth: 4,
+    backgroundColor: "#E3F2FD",
+  },
+  companionProfileCircleDisabled: {
+    opacity: 0.5,
+    borderColor: "#CCCCCC",
+  },
+  companionProfileImage: {
+    width: "100%",
+    height: "100%",
+  },
+  companionProfileImageDisabled: {
+    opacity: 0.5,
+  },
+  teamBadge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 2,
   },
   transitionContainer: {
     flex: 1,
@@ -1358,5 +1711,92 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: -1, height: 1},
     textShadowRadius: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    width: "80%",
+    maxWidth: 320,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+    color: "#333",
+  },
+  modalText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalButtonCancel: {
+    backgroundColor: "#E0E0E0",
+  },
+  modalButtonConfirm: {
+    backgroundColor: "#4CAF50",
+  },
+  modalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
+  modalButtonTextConfirm: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  battleLockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  battleLockContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  battleLockText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 20,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
 });
