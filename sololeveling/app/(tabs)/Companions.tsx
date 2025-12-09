@@ -485,6 +485,7 @@ export default function Companions() {
               <View style={styles.barsContainer}>
                 <View style={styles.healthBarContainer}>
                   <HealthBar value={stats.health} maxValue={stats.maxHp} color="#4CAF50" />
+                  <Text style={styles.healthText}>{stats.health}/{stats.maxHp}</Text>
                 </View>
                 <View style={styles.feedBarContainer}>
                   <FoodBar value={stats.hunger} maxValue={100} color="#FFA500" />
@@ -911,10 +912,17 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     marginBottom: 20,
-    gap: 16,
+    gap: 5,
   },
   healthBarContainer: {
     width: "100%",
+  },
+  healthText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    marginTop: 2,
+    textAlign: "center",
+    fontWeight: "500",
   },
   feedBarContainer: {
     width: "100%",
@@ -946,7 +954,7 @@ const styles = StyleSheet.create({
   statsContainer: {
     width: "100%",
     maxWidth: 370,
-    gap: 20,
+    gap: 10,
   },
   statRow: {
     flexDirection: "row",
