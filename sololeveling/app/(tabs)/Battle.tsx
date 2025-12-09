@@ -1,11 +1,12 @@
-import React, { useRef, useState } from "react";
-import { View, StyleSheet, ImageBackground, Dimensions, TouchableOpacity, Image, Animated } from "react-native";
+import React, { useRef, useState, useEffect } from "react";
+import { View, Text, StyleSheet, ImageBackground, Dimensions, TouchableOpacity, Image, Animated } from "react-native";
 import { useFonts, Jaro_400Regular } from "@expo-google-fonts/jaro";
 import { Audio } from "expo-av";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
 import BattleCharacter from "../components/BattleCharacter";
+import { getActionPoints, spendAPForAttack, subscribeToAP } from "../lib/apStore";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -16,8 +17,26 @@ export default function Battle() {
   const soundRef = useRef<Audio.Sound | null>(null);
   const hitSoundRef = useRef<Audio.Sound | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [ap, setAp] = useState<number>(getActionPoints());
+  const [showNoAPWarning, setShowNoAPWarning] = useState(false);
   const targetVolume = 0.05; // Target volume when unmuted
   const tickharePosition = useRef(new Animated.Value(0)).current; // Animation value for Tickhare position
+
+  // Subscribe to AP changes
+  useEffect(() => {
+    const unsub = subscribeToAP(() => {
+      setAp(getActionPoints());
+    });
+    return unsub;
+  }, []);
+
+  // Show "Not enough AP" warning for 1 second
+  const showAPWarning = () => {
+    setShowNoAPWarning(true);
+    setTimeout(() => {
+      setShowNoAPWarning(false);
+    }, 1000);
+  };
 
   // Fade in audio
   const fadeIn = async (sound: Audio.Sound, duration: number = 1000) => {
@@ -82,8 +101,14 @@ export default function Battle() {
     ]).start();
   };
 
-  // Handle button press - play sound and animate
+  // Handle button press - spend AP, play sound and animate
   const handleButtonPress = (action: string) => {
+    // Check and spend AP before attacking
+    if (!spendAPForAttack()) {
+      showAPWarning();
+      return;
+    }
+    
     console.log(`${action} selected`);
     playHitSound();
     animateTickhareAttack();
@@ -243,6 +268,20 @@ export default function Battle() {
         />
       </TouchableOpacity>
 
+      {/* AP Display - Top Right */}
+      <View style={styles.apContainer}>
+        <Ionicons name="flash" size={16} color="#F59E0B" />
+        <Text style={styles.apText}>{ap}</Text>
+      </View>
+
+      {/* Not Enough AP Warning */}
+      {showNoAPWarning && (
+        <View style={styles.noAPWarning}>
+          <Ionicons name="warning" size={16} color="#FFFFFF" />
+          <Text style={styles.noAPWarningText}>Not enough AP!</Text>
+        </View>
+      )}
+
       {/* Tickhare - Player's creature (reflected over y-axis, flipped horizontally) */}
       <Animated.View 
         style={[
@@ -369,6 +408,54 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  apContainer: {
+    position: "absolute",
+    top: 40,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
+  },
+  apText: {
+    color: "#B45309",
+    fontWeight: "800",
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  noAPWarning: {
+    position: "absolute",
+    top: 90,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1001,
+  },
+  noAPWarningText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
+    marginLeft: 6,
   },
   tickhareContainer: {
     position: "absolute",
