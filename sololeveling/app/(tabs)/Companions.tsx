@@ -109,6 +109,7 @@ export default function Companions() {
               defense: c.baseStats.defense,
               health: getCompanionHealth(c.id),
               hunger: c.name === "Flitterfinch" ? 0 : 65,
+              level: c.baseStats.level,
             };
           }
         });
@@ -138,6 +139,7 @@ export default function Companions() {
               defense: c.baseStats.defense,
               health: storeHealth,
               hunger: c.name === "Flitterfinch" ? 0 : 65,
+              level: c.baseStats.level,
             };
           }
         });
