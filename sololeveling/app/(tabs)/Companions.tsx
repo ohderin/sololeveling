@@ -1,7 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView, Modal, PanResponder, Animated } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import creatures from "../data/companions.json";
+import { getTeamMembers, toggleTeamMember as toggleTeamMemberStore, subscribe } from "../lib/teamStore";
+import { getCompanionHealth, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
+import { Background } from "@react-navigation/elements";
 
 const getCompanionImage = (imageName: string) => {
   const imageMap: { [key: string]: any } = {
@@ -27,11 +31,10 @@ const getCompanionBackground = (companionName: string) => {
 // Change the indicator for each companion by modifying the mapping below
 const getElementalIndicator = (companionName: string) => {
   const indicatorMap: { [key: string]: any } = {
-    "Tickhare": require("./companions_assets/Power.png"),
-    "Slumberpaw": require("./companions_assets/Elemental.png"),
-    "Flitterfinch": require("./companions_assets/Swift.png"),
+    "Tickhare": require("../companionImages/icons/fist.png"),
+    "Slumberpaw": require("../companionImages/icons/magic.png"),
+    "Flitterfinch": require("../companionImages/icons/wind.png"),
     // Add more companions here as needed
-    // Options: Power.png, Elemental.png, Swift.png
   };
   return indicatorMap[companionName] || require("./companions_assets/Power.png");
 };
@@ -55,7 +58,6 @@ const getNavImageStyle = (companionName: string) => {
       height: "100%",
       transform: [{ translateX: -10 }, { translateY: 32 }, { scale: 2.3 }],
     },
-    // Wearywise positioning (for when added): transform: [{ translateX: 5 }, { translateY: 30 }, { scale: 2.3 }]
   };
   return imageStyles[companionName] || { width: "100%", height: "100%" };
 };
@@ -66,42 +68,148 @@ const userCompanions = creatures.filter(
 );
 
 export default function Companions() {
+  let maxLevelView, showAttackUpgrade, showHpUpgrade, showDefenseUpgrade;
   const [selectedCompanionId, setSelectedCompanionId] = useState<number>(userCompanions[0]?.id || 1);
   const [showFeedModal, setShowFeedModal] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<number[]>([]);
+  const [teamMembers, setTeamMembers] = useState<number[]>(getTeamMembers());
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Subscribe to team changes
+  useEffect(() => {
+    const unsubscribe = subscribe(() => {
+      setTeamMembers(getTeamMembers());
+    });
+    return unsubscribe;
+  }, []);
+
+  // Initialize health for all companions on mount
+  useEffect(() => {
+    userCompanions.forEach((c) => {
+      initializeHealth(c.id, c.baseStats.health);
+    });
+  }, []);
+
+  // Subscribe to health changes from battle
+  useEffect(() => {
+    const unsubscribe = subscribeHealth(() => {
+      // Update health for all companions from the store
+      setCompanionStats(prev => {
+        const updated = { ...prev };
+        userCompanions.forEach((c) => {
+          if (updated[c.id]) {
+            updated[c.id] = {
+              ...updated[c.id],
+              health: getCompanionHealth(c.id),
+            };
+          } else {
+            // If companion stats don't exist yet, create them
+            updated[c.id] = {
+              attack: c.baseStats.attack,
+              maxHp: c.baseStats.health,
+              defense: c.baseStats.defense,
+              health: getCompanionHealth(c.id),
+              hunger: c.name === "Flitterfinch" ? 0 : 65,
+              level: c.baseStats.level,
+            };
+          }
+        });
+        return updated;
+      });
+    });
+    return unsubscribe;
+  }, []);
+
+  // Refresh health from store when page comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      // Update health for all companions from the store when page is focused
+      setCompanionStats(prev => {
+        const updated = { ...prev };
+        userCompanions.forEach((c) => {
+          const storeHealth = getCompanionHealth(c.id);
+          if (updated[c.id]) {
+            updated[c.id] = {
+              ...updated[c.id],
+              health: storeHealth,
+            };
+          } else {
+            updated[c.id] = {
+              attack: c.baseStats.attack,
+              maxHp: c.baseStats.health,
+              defense: c.baseStats.defense,
+              health: storeHealth,
+              hunger: c.name === "Flitterfinch" ? 0 : 65,
+              level: c.baseStats.level,
+            };
+          }
+        });
+        return updated;
+      });
+    }, [])
+  );
   const [companionOrder, setCompanionOrder] = useState<number[]>(() => userCompanions.map(c => c.id));
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [showHungryModal, setShowHungryModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [hungryCompanionId, setHungryCompanionId] = useState<number | null>(null);
+  const [actionPoints, setActionPoints] = useState<number | null>(null);
   
   // State for each companion's stats
-  const [companionStats, setCompanionStats] = useState<{ [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number } }>(() => {
-    const initial: { [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number } } = {};
+  const [companionStats, setCompanionStats] = useState<{ [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number; level: number;} }>(() => {
+    const initial: { [key: number]: { attack: number; maxHp: number; defense: number; health: number; hunger: number; level: number; } } = {};
     userCompanions.forEach((c) => {
+      // Initialize health from store or use base health
+      initializeHealth(c.id, c.baseStats.health);
+      const storedHealth = getCompanionHealth(c.id);
       initial[c.id] = {
         attack: c.baseStats.attack,
         maxHp: c.baseStats.health,
         defense: c.baseStats.defense,
-        health: c.baseStats.health,
+        health: storedHealth, // Use health from store
         hunger: c.name === "Flitterfinch" ? 0 : 65, // Flitterfinch starts at 0 hunger
+        level: c.baseStats.level,
       };
     });
     return initial;
   });
 
+  // Reset a single companion's stats back to baseStats
+  const resetCompanionStats = (id: number) => {
+    const comp = userCompanions.find(c => c.id === id);
+    if (!comp) return;
+    setCompanionStats(prev => ({
+      ...prev,
+      [id]: {
+        attack: comp.baseStats.attack,
+        maxHp: comp.baseStats.health,
+        defense: comp.baseStats.defense,
+        health: comp.baseStats.health,
+        hunger: stats.hunger,
+        level: 0,
+      },
+    }));
+  };
+
   const selectedCompanion = userCompanions.find((c) => c.id === selectedCompanionId) || userCompanions[0];
-  const stats = companionStats[selectedCompanionId] || {
+  // Always get the latest health from the store
+  const currentStats = companionStats[selectedCompanionId];
+  const storeHealth = getCompanionHealth(selectedCompanionId);
+  const stats = currentStats ? {
+    ...currentStats,
+    health: storeHealth, 
+  } : {
     attack: selectedCompanion?.baseStats.attack || 0,
     maxHp: selectedCompanion?.baseStats.health || 0,
     defense: selectedCompanion?.baseStats.defense || 0,
-    health: selectedCompanion?.baseStats.health || 0,
+    health: storeHealth || selectedCompanion?.baseStats.health || 0,
     hunger: 65,
+    level: selectedCompanion?.baseStats.level || 0,
   };
 
-  const updateStat = (stat: "attack" | "maxHp" | "defense", delta: number) => {
+
+  const updateStat = (stat: "attack" | "maxHp" | "defense" | "level", delta: number) => {
     setCompanionStats((prev) => ({
       ...prev,
       [selectedCompanionId]: {
@@ -123,18 +231,8 @@ export default function Companions() {
       return;
     }
     
-    setTeamMembers((prev) => {
-      if (prev.includes(companionId)) {
-        // Remove from team
-        return prev.filter((id) => id !== companionId);
-      } else {
-        // Add to team (max 3)
-        if (prev.length < 3) {
-          return [...prev, companionId];
-        }
-        return prev; // Already at max, don't add
-      }
-    });
+    // Use the teamStore function
+    toggleTeamMemberStore(companionId);
   };
 
   const moveCompanion = (fromIndex: number, toIndex: number) => {
@@ -151,7 +249,6 @@ export default function Companions() {
     return PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        // Start dragging after a small movement
         return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
       },
       onPanResponderGrant: () => {
@@ -161,9 +258,9 @@ export default function Companions() {
         setDragPosition({ x: gestureState.moveX, y: gestureState.moveY });
         
         // Find which item we're hovering over
-        const buttonWidth = 60; // navButton width
-        const buttonGap = 8; // gap between buttons
-        const scrollOffset = 0; // You might need to track scroll position
+        const buttonWidth = 60; 
+        const buttonGap = 8; 
+        const scrollOffset = 0; 
         const hoverIndex = Math.floor((gestureState.moveX - scrollOffset) / (buttonWidth + buttonGap));
         
         if (hoverIndex >= 0 && hoverIndex < companionOrder.length && hoverIndex !== index) {
@@ -194,6 +291,88 @@ export default function Companions() {
       </View>
     );
   };
+
+  const FoodBar = ({ value, maxValue, color }: { value: number; maxValue: number; color: string }) => {
+    const percentage = Math.min((value / maxValue) * 100, 100);
+    return (
+      <View style={styles.foodBar}>
+        <View style={[styles.barFill, { width: `${percentage}%`, backgroundColor: color }]} />
+      </View>
+    );
+  };
+
+  {/*Max Level Indicator*/}
+  if (stats.level === 30) {
+    maxLevelView =
+      <View style={styles.maxLevelIndicator}>
+        <Text style={{fontSize: 12, alignSelf: "center", color: "#FFF"}}>MAX</Text>
+      </View>
+  }
+
+  {/*Hides '+' when max level is reached*/}
+  if (stats.level != 30) {
+    showAttackUpgrade = 
+      <View style={styles.statControls}>
+        <Text style={styles.statValue}>{stats.attack}</Text>
+        <TouchableOpacity
+          style={styles.statButton}
+          onPress={() => {updateStat("attack", 1); updateStat("level", 1)}}
+        >
+          <Text style={styles.statButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+  }
+  else {
+    showAttackUpgrade = 
+      <View style={styles.statControls}>
+        <Text style={styles.statValue}>{stats.attack}</Text>
+        <View style={{width: 36, height: 36,}}>
+        </View>
+      </View>
+  }
+
+  {/*Hides '+' when max level is reached*/}
+  if (stats.level != 30) {
+    showHpUpgrade = 
+      <View style={styles.statControls}>
+        <Text style={styles.statValue}>{stats.maxHp}</Text>
+        <TouchableOpacity
+          style={styles.statButton}
+          onPress={() => {updateStat("maxHp", 1); updateStat("level", 1)}}
+        >
+          <Text style={styles.statButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+  }
+  else {
+    showHpUpgrade = 
+      <View style={styles.statControls}>
+        <Text style={styles.statValue}>{stats.maxHp}</Text>
+        <View style={{width: 36, height: 36,}}>
+        </View>
+      </View>
+  }
+  {/*Hides '+' when max level is reached*/}
+  if (stats.level != 30) {
+    showDefenseUpgrade = 
+      <View style={styles.statControls}>
+        <Text style={styles.statValue}>{stats.defense}</Text>
+        <TouchableOpacity
+          style={styles.statButton}
+          onPress={() => {updateStat("defense", 1); updateStat("level", 1)}}
+        >
+          <Text style={styles.statButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+  }
+  else {
+    showDefenseUpgrade = 
+      <View style={styles.statControls}>
+        <Text style={styles.statValue}>{stats.defense}</Text>
+        <View style={{width: 36, height: 36,}}>
+        </View>
+      </View>
+  }
 
   return (
     <View style={styles.mainContainer}>
@@ -251,21 +430,20 @@ export default function Companions() {
         </ScrollView>
       </View>
 
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      
 
       {/* Selected Companion Details */}
       {selectedCompanion && (
         <View style={styles.companionDetails}>
           <View style={styles.companionImageContainer}>
             {/* Background Image */}
-            {/* Adjust blur here: blurRadius={3} - higher number = more blur */}
             <Image
               source={getCompanionBackground(selectedCompanion.name)}
               style={styles.companionBackground}
               resizeMode="cover"
               blurRadius={5}
             />
-            {/* Black Overlay - Adjust opacity in styles.backgroundOverlay (0.7 = 70% opacity) */}
+            {/* Black Overlay*/}
             <View style={styles.backgroundOverlay} />
             
             {/* 3 Dots Menu Button */}
@@ -278,23 +456,8 @@ export default function Companions() {
             
             {/* Companion Image and Name */}
             <View style={styles.companionContent}>
-              <View style={styles.imageWrapper}>
-                <Image
-                  source={getCompanionImage(selectedCompanion.image)}
-                  style={styles.companionImage}
-                  resizeMode="contain"
-                />
-                {/* Feed Button */}
-                <TouchableOpacity 
-                  style={styles.feedButton}
-                  onPress={() => setShowFeedModal(true)}
-                >
-                  <Image
-                    source={require("./companions_assets/drumstick.png")}
-                    style={styles.feedButtonIcon}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
+              <View style={styles.nameContainer}>
+                <Text style={styles.companionName}>{selectedCompanion.name}</Text>
                 {/* Elemental Indicator */}
                 <Image
                   source={getElementalIndicator(selectedCompanion.name)}
@@ -302,88 +465,82 @@ export default function Companions() {
                   resizeMode="contain"
                 />
               </View>
+              <View style={styles.imageWrapper}>
+                <Image
+                  source={getCompanionImage(selectedCompanion.image)}
+                  style={styles.companionImage}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.levelTextContainer}>
+                <Text style={{fontSize: 16, color: "white"}}>Level </Text>
+                <Text style={styles.levelText}>
+                  {
+                    stats?.level ?? selectedCompanion?.baseStats?.level ?? 'Lv —'
+                  }
+                </Text>
+                <Text style={{fontSize: 16, color: "white"}}> / </Text>
+                <Text style={{fontSize: 16, color: "#acacacff"}}>30</Text>
+                {maxLevelView}
+              </View>
+              {/* Health and Hunger Bars */}
+              <View style={styles.barsContainer}>
+                <View style={styles.healthBarContainer}>
+                  <HealthBar value={stats.health} maxValue={stats.maxHp} color="#4CAF50" />
+                  <Text style={styles.healthText}>{stats.health}/{stats.maxHp}</Text>
+                </View>
+                <View style={styles.feedBarContainer}>
+                  <FoodBar value={stats.hunger} maxValue={100} color="#FFA500" />
+                </View>
+              </View>
+              {/* Feed Button */}
+                <TouchableOpacity 
+                  style={styles.feedButton}
+                  onPress={() => setShowFeedModal(true)}
+                >
+                  <Text style={styles.feedButtonText}>Feed</Text>
+                  <Image
+                    source={require("../companionImages/icons/coffee.png")}
+                    style={styles.feedButtonIcon}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
               
-              <Text style={styles.companionName}>{selectedCompanion.name}</Text>
+              
             </View>
           </View>
-
-          {/* Health and Hunger Bars */}
-          <View style={styles.barsContainer}>
-            <View style={styles.barLabelContainer}>
-              <Text style={styles.barLabel}>Health</Text>
-              <HealthBar value={stats.health} maxValue={stats.maxHp} color="#4CAF50" />
-            </View>
-            <View style={styles.barLabelContainer}>
-              <Text style={styles.barLabel}>Hunger</Text>
-              <HealthBar value={stats.hunger} maxValue={100} color="#FFA500" />
-            </View>
-          </View>
-
+ 
           {/* Stats with +/- buttons */}
           <View style={styles.statsContainer}>
             {/* Attack Power */}
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Attack Power</Text>
-              <View style={styles.statControls}>
-                <TouchableOpacity
-                  style={styles.statButton}
-                  onPress={() => updateStat("attack", -1)}
-                >
-                  <Text style={styles.statButtonText}>-</Text>
-                </TouchableOpacity>
-                <Text style={styles.statValue}>{stats.attack}</Text>
-                <TouchableOpacity
-                  style={styles.statButton}
-                  onPress={() => updateStat("attack", 1)}
-                >
-                  <Text style={styles.statButtonText}>+</Text>
-                </TouchableOpacity>
+              <View style={{flexDirection: "row", alignItems: "center",}}>
+                <FontAwesome5 name={"fist-raised"} size={25} color="#6320EE"/>
+                <Text style={styles.statLabel}> Attack</Text>
               </View>
+              {showAttackUpgrade}
             </View>
 
             {/* Max HP */}
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Max HP</Text>
-              <View style={styles.statControls}>
-                <TouchableOpacity
-                  style={styles.statButton}
-                  onPress={() => updateStat("maxHp", -1)}
-                >
-                  <Text style={styles.statButtonText}>-</Text>
-                </TouchableOpacity>
-                <Text style={styles.statValue}>{stats.maxHp}</Text>
-                <TouchableOpacity
-                  style={styles.statButton}
-                  onPress={() => updateStat("maxHp", 1)}
-                >
-                  <Text style={styles.statButtonText}>+</Text>
-                </TouchableOpacity>
+              <View style={{flexDirection: "row", alignItems: "center"}}>
+                <Ionicons name={"heart"} size={25} color="#6320EE"/>
+                <Text style={styles.statLabel}>Health</Text>
               </View>
+              {showHpUpgrade}
             </View>
 
             {/* Defense */}
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Defense</Text>
-              <View style={styles.statControls}>
-                <TouchableOpacity
-                  style={styles.statButton}
-                  onPress={() => updateStat("defense", -1)}
-                >
-                  <Text style={styles.statButtonText}>-</Text>
-                </TouchableOpacity>
-                <Text style={styles.statValue}>{stats.defense}</Text>
-                <TouchableOpacity
-                  style={styles.statButton}
-                  onPress={() => updateStat("defense", 1)}
-                >
-                  <Text style={styles.statButtonText}>+</Text>
-                </TouchableOpacity>
+              <View style={{flexDirection: "row", alignItems: "center"}}>
+                <Ionicons name={"shield"} size={25} color="#6320EE"/>
+                <Text style={styles.statLabel}>Defense</Text>
               </View>
+              {showDefenseUpgrade}
             </View>
           </View>
           </View>
         )}
-      </ScrollView>
 
       {/* Feed Modal */}
       <Modal
@@ -463,15 +620,48 @@ export default function Companions() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                // Add release logic here
-                setShowMenu(false);
+                setShowResetModal(true);
               }}
             >
-              <Text style={[styles.menuItemText, styles.menuItemDanger]}>Release</Text>
+              <Text style={[styles.menuItemText, styles.menuItemDanger]}>Reset Stats</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
+
+      {/* Reset Stats Modal */}
+      <Modal
+        visible={showResetModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowResetModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+                <Text style={styles.modalText}>Are you sure you want to reset this companion's stats?</Text>
+                <Text style={styles.modalText}>Doing this will return its level back to 0 in return for:</Text>
+                <Text style={styles.modalTitle}>{stats?.level ?? selectedCompanion?.baseStats?.level ?? 'Lv —'} AP</Text>
+                <View></View>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonCancel]}
+                    onPress={() => setShowResetModal(false)}
+                  >
+                    <Text style={styles.modalButtonTextCancel}>Close</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonReset]}
+                    onPress={() => {setShowMenu(false); setShowResetModal(false);  updateStat("level", -stats.level); resetCompanionStats(selectedCompanionId);}}
+                  >
+                    <Text style={styles.modalButtonTextReset}>Yes, Reset!</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{marginTop: 25}}>
+                  <Text>Cost: 10 AP</Text>
+                </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Hungry Companion Modal */}
       <Modal
@@ -527,10 +717,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   topNavbar: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#454851",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-    paddingTop: 60,
+    borderBottomColor: "#8a8a8aff",
+    paddingTop: 30,
     paddingBottom: 0,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -574,7 +764,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   navImageCircleActive: {
-    borderColor: "#007AFF",
+    borderColor: "#B7B0FF",
     borderWidth: 3,
   },
   navImageCircleTeam: {
@@ -613,7 +803,6 @@ const styles = StyleSheet.create({
     width: "100%",
     minHeight: 360,
     borderRadius: 0,
-    overflow: "hidden",
     marginBottom: 20,
     position: "relative",
   },
@@ -644,8 +833,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    // Adjust opacity here: 0.7 = 70% opacity (0.0 = transparent, 1.0 = fully opaque)
     backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  maxLevelIndicator: {
+    height: 20,
+    width: 40,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#FFF",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginLeft: 5,
   },
   companionContent: {
     position: "relative",
@@ -656,7 +854,7 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     position: "relative",
-    marginBottom: 16,
+ 
   },
   companionImage: {
     width: 200,
@@ -665,33 +863,45 @@ const styles = StyleSheet.create({
     borderColor: "#FFFFFF",
     borderRadius: 0,
   },
-  feedButton: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#FFA500",
-    justifyContent: "center",
+  nameContainer: {
+    width: "60%",
+    height: 40,
+    justifyContent: "space-evenly",
     alignItems: "center",
-    borderWidth: 0,
+    flexDirection: "row",
+  },
+  feedButton: {
+    width: 130,
+    height: 35,
+    flexDirection: "row",
+    alignSelf: "center",
+    borderRadius: 100,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    borderWidth: 2,
     borderColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    justifyContent: "center",
   },
   feedButtonIcon: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
+    marginLeft: 8,
+  },
+  levelTextContainer:{
+    flexDirection: "row",
+    marginBottom: 10,
+    alignSelf: "flex-start",
+  },
+  levelText:{
+    fontSize: 16,
+    color: "white",
+  },
+  feedButtonText:{
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "500",
   },
   elementalIndicator: {
-    position: "absolute",
-    // Adjust position here - same for all companions
-    top: 8,
-    left: -20,
     width: 40,
     height: 40,
   },
@@ -702,22 +912,39 @@ const styles = StyleSheet.create({
   },
   barsContainer: {
     width: "100%",
-    maxWidth: 300,
-    marginBottom: 32,
-    gap: 16,
+    maxWidth: 400,
+    marginBottom: 20,
+    gap: 5,
   },
-  barLabelContainer: {
+  healthBarContainer: {
     width: "100%",
   },
-  barLabel: {
+  healthText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    marginTop: 2,
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  feedBarContainer: {
+    width: "100%",
+  },
+  healthBarLabel: {
     fontSize: 14,
     fontWeight: "500",
     marginBottom: 6,
-    color: "#333",
+    color: "white",
   },
   barContainer: {
     width: "100%",
     height: 20,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  foodBar: {
+    width: "100%",
+    height: 10,
     backgroundColor: "#E0E0E0",
     borderRadius: 10,
     overflow: "hidden",
@@ -728,19 +955,20 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     width: "100%",
-    maxWidth: 300,
-    gap: 20,
+    maxWidth: 370,
+    gap: 10,
   },
   statRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 2,
   },
   statLabel: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "500",
     color: "#333",
+    marginLeft: 15
   },
   statControls: {
     flexDirection: "row",
@@ -751,12 +979,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#F0F0F0",
     justifyContent: "center",
     alignItems: "center",
   },
   statButtonText: {
-    color: "#FFFFFF",
+    color: "black",
     fontSize: 20,
     fontWeight: "600",
   },
@@ -808,6 +1036,9 @@ const styles = StyleSheet.create({
     gap: 12,
     width: "100%",
   },
+  modalButtonReset:{
+    backgroundColor: "#4CAF50",
+  },
   modalButton: {
     flex: 1,
     paddingVertical: 12,
@@ -826,6 +1057,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
+  },
+  modalButtonTextReset: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFF",
   },
   modalButtonTextConfirm: {
     fontSize: 16,
@@ -846,7 +1082,7 @@ const styles = StyleSheet.create({
   },
   menuContent: {
     position: "absolute",
-    top: 225, // Position below the menu button (button top: 12 + height: 40 + spacing: 4)
+    top: 225, 
     right: 12,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,

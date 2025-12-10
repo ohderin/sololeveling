@@ -52,8 +52,8 @@ export default function Login() {
         <View style={styles.container}>
 
             <View style={{ flexDirection: 'row'}}>
-                <Text style={styles.boldSubtitle}>Solo</Text>
-                <Text style={styles.subtitle}>Leveling</Text>
+                <Text style={styles.boldSubtitle}>Task</Text>
+                <Text style={styles.subtitle}>Tamer</Text>
             </View>
             <View style={{ height: '5%' }} />
             <Text style={styles.title}>Welcome back!</Text>
