@@ -1,7 +1,12 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Text, View, StyleSheet, TextInput, TouchableOpacity, Pressable } from "react-native";
+import { Text, View, StyleSheet, TextInput, TouchableOpacity, Pressable, ImageBackground, Dimensions, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { addTask } from "../lib/taskStore";
+import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const BACKGROUND_HEIGHT = SCREEN_HEIGHT * 0.25;
 
 export default function CreateTask() {
     const router = useRouter();
@@ -24,66 +29,79 @@ export default function CreateTask() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Create Tasks</Text>
-            
-            <Text style={styles.label}>Task Name</Text>
-            <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter Task Name"
-                style={styles.input}
-            />
-            
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-                value={desc}
-                onChangeText={setDesc}
-                placeholder="Enter Task Description"
-                multiline
-                style={[styles.input, styles.textArea]}
-            />
-            
-            <Text style={styles.label}>Task Duration</Text>
-            <View style={styles.radioGroup}>
-                <Pressable style={styles.radioOption} onPress={() => setDuration("daily")}>
-                    <View style={styles.radioCircle}>
-                        {duration === "daily" && <View style={styles.radioSelected} />}
-                    </View>
-                    <Text style={styles.radioLabel}>Daily</Text>
-                </Pressable>
-                <Pressable style={styles.radioOption} onPress={() => setDuration("weekly")}>
-                    <View style={styles.radioCircle}>
-                        {duration === "weekly" && <View style={styles.radioSelected} />}
-                    </View>
-                    <Text style={styles.radioLabel}>Weekly</Text>
-                </Pressable>
-            </View>
-            
-            <Text style={styles.label}>Priority</Text>
-            <View style={styles.segmentedControl}>
-                <Pressable 
-                    style={[styles.segment, priority === "low" && styles.segmentActive]} 
-                    onPress={() => setPriority("low")}
-                >
-                    <Text style={[styles.segmentText, priority === "low" && styles.segmentTextActive]}>Low</Text>
-                </Pressable>
-                <Pressable 
-                    style={[styles.segment, priority === "medium" && styles.segmentActive]} 
-                    onPress={() => setPriority("medium")}
-                >
-                    <Text style={[styles.segmentText, priority === "medium" && styles.segmentTextActive]}>Medium</Text>
-                </Pressable>
-                <Pressable 
-                    style={[styles.segment, priority === "high" && styles.segmentActive]} 
-                    onPress={() => setPriority("high")}
-                >
-                    <Text style={[styles.segmentText, priority === "high" && styles.segmentTextActive]}>High</Text>
-                </Pressable>
-            </View>
-            
-            <TouchableOpacity style={styles.addButton} onPress={submit}>
-                <Text style={styles.addButtonText}>Add Task</Text>
-            </TouchableOpacity>
+            {/* Background Section - Top 1/4 */}
+            <ImageBackground 
+                source={require('../companionImages/backgrounds/taskbg.png')} 
+                style={styles.backgroundSection}
+                resizeMode="cover"
+            >
+                <View style={styles.backgroundOverlay} />
+                <SafeAreaView style={styles.safeAreaTop} edges={['top']}>
+                    <Text style={styles.title}>Create Tasks</Text>
+                </SafeAreaView>
+            </ImageBackground>
+
+            {/* Form Section - Bottom 3/4 */}
+            <ScrollView style={styles.formSection} contentContainerStyle={styles.formContent}>
+                <Text style={styles.label}>Task Name</Text>
+                <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Enter Task Name"
+                    style={styles.input}
+                />
+                
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                    value={desc}
+                    onChangeText={setDesc}
+                    placeholder="Enter Task Description"
+                    multiline
+                    style={[styles.input, styles.textArea]}
+                />
+                
+                <Text style={styles.label}>Task Duration</Text>
+                <View style={styles.radioGroup}>
+                    <Pressable style={styles.radioOption} onPress={() => setDuration("daily")}>
+                        <View style={styles.radioCircle}>
+                            {duration === "daily" && <View style={styles.radioSelected} />}
+                        </View>
+                        <Text style={styles.radioLabel}>Daily</Text>
+                    </Pressable>
+                    <Pressable style={styles.radioOption} onPress={() => setDuration("weekly")}>
+                        <View style={styles.radioCircle}>
+                            {duration === "weekly" && <View style={styles.radioSelected} />}
+                        </View>
+                        <Text style={styles.radioLabel}>Weekly</Text>
+                    </Pressable>
+                </View>
+                
+                <Text style={styles.label}>Priority</Text>
+                <View style={styles.segmentedControl}>
+                    <Pressable 
+                        style={[styles.segment, priority === "low" && styles.segmentActive]} 
+                        onPress={() => setPriority("low")}
+                    >
+                        <Text style={[styles.segmentText, priority === "low" && styles.segmentTextActive]}>Low</Text>
+                    </Pressable>
+                    <Pressable 
+                        style={[styles.segment, priority === "medium" && styles.segmentActive]} 
+                        onPress={() => setPriority("medium")}
+                    >
+                        <Text style={[styles.segmentText, priority === "medium" && styles.segmentTextActive]}>Medium</Text>
+                    </Pressable>
+                    <Pressable 
+                        style={[styles.segment, priority === "high" && styles.segmentActive]} 
+                        onPress={() => setPriority("high")}
+                    >
+                        <Text style={[styles.segmentText, priority === "high" && styles.segmentTextActive]}>High</Text>
+                    </Pressable>
+                </View>
+                
+                <TouchableOpacity style={styles.addButton} onPress={submit}>
+                    <Text style={styles.addButtonText}>Add Task</Text>
+                </TouchableOpacity>
+            </ScrollView>
         </View>
     );
 }
@@ -92,30 +110,65 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    padding: 20,
-    paddingTop: 60,
+  },
+  backgroundSection: {
+    height: BACKGROUND_HEIGHT,
+    width: "100%",
+    justifyContent: "flex-end",
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    overflow: "hidden",
+  },
+  backgroundOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  safeAreaTop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    paddingBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#000000",
+    fontFamily: getAfacadFont('bold'),
+    fontSize: 28,
+    marginBottom: 20,
+    color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 30,
+  },
+  formSection: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: -30,
+  },
+  formContent: {
+    padding: 20,
+    paddingTop: 30,
+    paddingBottom: 40,
   },
   label: {
+    ...defaultTextStyle,
     fontSize: 16,
     fontWeight: "500",
-    color: "#000000",
+    color: "#6320EE",
     marginTop: 16,
     marginBottom: 8,
   },
   input: {
+    ...defaultTextStyle,
     backgroundColor: "#F5F5F5",
     borderRadius: 8,
     height: 44,
     paddingHorizontal: 12,
     fontSize: 16,
     color: "#000000",
+    borderWidth: 1,
+    borderColor: "#6320EE",
   },
   textArea: {
     height: 100,
@@ -136,7 +189,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#007AFF",
+    borderColor: "#6320EE",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
@@ -145,9 +198,10 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#6320EE",
   },
   radioLabel: {
+    ...defaultTextStyle,
     fontSize: 16,
     color: "#000000",
   },
@@ -166,26 +220,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   segmentActive: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#6320EE",
   },
   segmentText: {
+    ...defaultTextStyle,
     fontSize: 16,
     color: "#666666",
     fontWeight: "500",
   },
   segmentTextActive: {
+    ...defaultTextStyle,
     color: "#FFFFFF",
   },
   addButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
+    backgroundColor: "#93E1D8",
+    borderRadius: 50,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 32,
   },
   addButtonText: {
+    ...defaultTextStyle,
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: "#363946",
   },
 });

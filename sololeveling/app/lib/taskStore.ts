@@ -21,6 +21,12 @@ export const addTask = (task: Task) => {
   tasks.unshift(task);
   listeners.forEach((l) => l());
 };
+export const removeTask = (id: string) => {
+  const idx = tasks.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  tasks.splice(idx, 1);
+  listeners.forEach((l) => l());
+};
 export const toggleTask = (id: string) => {
   const task = tasks.find(t => t.id === id);
   if (task) {
