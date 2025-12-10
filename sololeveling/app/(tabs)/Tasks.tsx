@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import React, { useEffect, useState, useRef } from "react";
-import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable, Modal, ImageBackground } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import { getTasks, subscribe, Task, toggleTask, getDailyCompletions, hax } from "../lib/taskStore";
 import { getActionPoints, subscribeToAP } from "../lib/apStore";
+import { Alert } from "react-native";
 import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
 
 export default function Tasks() {
@@ -13,6 +14,8 @@ export default function Tasks() {
   const [dailyCompletions, setDailyCompletions] = useState<number>(getDailyCompletions());
   const [notCompletedCollapsed, setNotCompletedCollapsed] = useState(false);
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
+  const [taskInfoModal, setTaskInfoModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const dingSound = useAudioPlayer(require('../barena_assets/ding!.wav'));
 
   // Apply SFX volume to ding sound
@@ -54,16 +57,14 @@ export default function Tasks() {
   const progressPercentage = (completedCount / dailyGoal) * 100;
   const isProgressComplete = completedCount >= dailyGoal;
 
-  const getTimeRemaining = (deadline?: string) => {
-    if (!deadline) return null;
-    const now = new Date();
-    const deadlineDate = new Date(deadline);
-    const diff = deadlineDate.getTime() - now.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    return hours > 0 ? `${hours} hrs` : "< 12 hrs";
-  };
-
   return (
+    <View style={styles.safeArea}>
+
+    <ImageBackground 
+            source={require('../companionImages/backgrounds/taskbg.png')} 
+            style={styles.backgroundImage}
+            resizeMode="cover"
+    >
     <View style={styles.container}>
       <View style={styles.apContainer}>
         <Ionicons name="flash" size={16} color="#F59E0B" />
@@ -101,10 +102,13 @@ export default function Tasks() {
           <Text style={styles.emptyText}>No incomplete tasks</Text>
         )}
         {!notCompletedCollapsed && notCompletedTasks.map((task) => (
-          <TouchableOpacity 
-            key={task.id} 
+          <TouchableOpacity
+            key={task.id}
             style={styles.taskCard}
             onPress={() => {
+              setTaskInfoModal(true);
+              setSelectedTask(task);
+            } }
               // Play sound when marking task as completed (same approach as blippie sound)
               dingSound.seekTo(0);
               dingSound.play();
@@ -113,19 +117,91 @@ export default function Tasks() {
           >
             <View style={styles.taskContent}>
               <Text style={styles.taskTitle}>{task.name}</Text>
-              {task.desc && <Text style={styles.taskDescription}>{task.desc}</Text>}
-              {task.deadline && (
-                <View style={styles.deadlineRow}>
-                  <Text style={styles.deadlineLabel}>Deadline: </Text>
-                  <Text style={styles.deadlineUrgent}>{getTimeRemaining(task.deadline)}</Text>
-                </View>
-              )}
             </View>
-            <View style={styles.taskCheckbox}>
+            <TouchableOpacity
+              style={styles.taskCheckbox}
+              onPress={() => toggleTask(task.id)}
+            >
               <Ionicons name="ellipse-outline" size={28} color="#007AFF" />
-            </View>
+            </TouchableOpacity>
           </TouchableOpacity>
         ))}
+
+        <Modal
+            visible={taskInfoModal && selectedTask !== null}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => {setTaskInfoModal(false); setSelectedTask(null)}}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.taskModalHeader}>
+                  <Text style={styles.taskModalHeaderText}>{selectedTask?.name}</Text>
+                </View>
+                <Text style={styles.taskModalSubHeaderText}>Description</Text>
+                <Text style={styles.taskModalText}>{selectedTask?.desc}</Text>
+                <Text style={styles.taskModalSubHeaderText}>Task Duration</Text>
+                <Text style={styles.taskModalText}>
+                  {selectedTask?.duration === "daily" ? "One day remaining"
+                   : selectedTask?.duration === "weekly" ? "7 days remaining"
+                   : "No deadline"
+                  }
+                </Text>
+                <Text style={styles.taskModalSubHeaderText}>Priority Level</Text>
+                <View style={styles.priorityRow}>
+                  <Text style={[styles.taskModalText, styles.priorityText]}>
+                    {selectedTask?.priority === "high" ? "High"
+                      : selectedTask?.priority === "medium" ? "Medium"
+                      : selectedTask?.priority === "low" ? "Low"
+                      : "No Priority"}
+                  </Text>
+                  <View
+                    style={[
+                      styles.priorityDot,
+                      { backgroundColor:
+                        selectedTask?.priority === "high" ? "#E53E3E" :
+                        selectedTask?.priority === "medium" ? "#F6C23E" :
+                        selectedTask?.priority === "low" ? "#5eee6fff" :
+                        "#D1D5DB" }
+                    ]}
+                  />
+                </View>
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={[styles.modalButtonDelete]}
+                    onPress={() => {
+                      if (!selectedTask) return;
+                      Alert.alert(
+                        "Delete task",
+                        `Remove "${selectedTask.name}"? This cannot be undone.`,
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: () => {
+                              removeTask(selectedTask.id);
+                              setTaskInfoModal(false);
+                              setSelectedTask(null);
+                            }
+                          }
+                        ]
+                      );
+                    }}
+                  >
+                    <Ionicons name={"trash"} size={30} color="#FFF"/>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalButtonCancel]}
+                    onPress={() => {setTaskInfoModal(false); setSelectedTask(null)}}
+                  >
+                    <Text style={styles.modalButtonTextCancel}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+        </Modal>
 
         <Pressable onPress={() => setCompletedCollapsed(!completedCollapsed)} style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Completed</Text>
@@ -139,19 +215,20 @@ export default function Tasks() {
           <Text style={styles.emptyText}>No completed tasks</Text>
         )}
         {!completedCollapsed && completedTasks.map((task) => (
-          <TouchableOpacity 
+          <View 
             key={task.id} 
             style={[styles.taskCard, styles.completedCard]}
-            onPress={() => toggleTask(task.id)}
           >
             <View style={styles.taskContent}>
               <Text style={styles.taskTitle}>{task.name}</Text>
-              {task.desc && <Text style={styles.taskDescription}>{task.desc}</Text>}
             </View>
-            <View style={[styles.taskCheckbox, styles.completedCheckbox]}>
+            <TouchableOpacity 
+              style={[styles.taskCheckbox, styles.completedCheckbox]}
+              onPress={() => toggleTask(task.id)}
+            >
               <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         ))}
       </ScrollView>
 
@@ -162,15 +239,135 @@ export default function Tasks() {
         <Text style={styles.bottomButtonText}>Add new task</Text>
       </TouchableOpacity>
     </View>
+    </ImageBackground>
+  </View>
   );
 }
-
+ 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+<<<<<<< HEAD
+=======
     backgroundColor: "#FFFFFF",
     padding: 20,
+>>>>>>> aaronmain
     paddingTop: 60,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  modalFooter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  modalButtonDelete: {
+    backgroundColor: "#E53E3E",
+    height: 50,
+    width: 50,
+    alignItems: 'center',
+    borderRadius: 100,
+    justifyContent: 'center',
+    position: 'absolute',
+    left: 24,
+  },
+  priorityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginBottom: "auto",
+    gap: 8,
+  },
+  priorityDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 14,
+    marginRight: 8,
+  },
+  priorityText: {
+    fontSize: 18,
+    color: "#FFF",
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalButtonCancel: {
+    backgroundColor: "#93E1D8",
+    height: 50,
+    width: 150,
+    borderRadius: 200,
+    justifyContent: 'center',
+  },
+  modalButtonConfirm: {
+    backgroundColor: "#4CAF50",
+  },
+  modalButtonTextCancel: {
+    fontSize: 20,
+    color: "black",
+    fontWeight: "500",
+    alignSelf: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#454851",
+    borderRadius: 20,
+    padding: 16,
+    alignItems: "center",
+    width: "90%",
+    height: '50%',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  taskModalHeader: {
+    width: '100%',
+    height: 60,
+    backgroundColor: "#9088eeff",
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    justifyContent: 'center',
+    padding: 10,
+  },
+  taskModalHeaderText: {
+    fontSize: 20,
+    color: "#FFF",
+    fontWeight: "700",
+    flexShrink: 1,
+  },
+  taskModalSubHeaderText: {
+    alignSelf: 'flex-start',
+    fontSize: 18,
+    color: '#B7B0FF',
+    marginBottom: 8,
+    marginTop: 24,
+  },
+  taskModalText: {
+    alignSelf: 'flex-start',
+    fontSize: 18,
+    color: '#FFF',
+    flexShrink: 1,
   },
   apContainer: {
     position: "absolute",
@@ -202,21 +399,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginHorizontal: 20,
     marginTop: 50,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "#454851",
     borderRadius: 12,
     marginBottom: 24,
   },
   bossTaskTitle: {
     fontFamily: "Afacad_700Bold",
     fontSize: 20,
-    color: "#000000",
+    color: "#FFFFFF",
     textAlign: "center",
     marginBottom: 4,
   },
   bossTaskDesc: {
     fontFamily: getAfacadFont(),
     fontSize: 16,
-    color: "#666666",
+    color: "#DDDDDD",
     textAlign: "center",
     marginBottom: 12,
   },
@@ -225,14 +422,14 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 36,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: "#666666",
     borderRadius: 18,
     overflow: "hidden",
     position: "relative",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#6320EE",
   },
   progressTextContainer: {
     position: "absolute",
@@ -245,21 +442,21 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontFamily: "Afacad_600SemiBold",
-    color: "#000000",
+    color: "#FFFFFF",
     fontSize: 11,
   },
   claimButton: {
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: "#E0E0E0",
-    borderRadius: 8,
+    borderRadius: 50,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#8B90A0",
     alignItems: "center",
   },
   claimButtonActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: "#93E1D8",
+    borderColor: "#93E1D8",
   },
   claimButtonText: {
     fontFamily: "Afacad_500Medium",
@@ -268,7 +465,7 @@ const styles = StyleSheet.create({
   },
   claimButtonTextActive: {
     fontFamily: "Afacad_600SemiBold",
-    color: "#FFFFFF",
+    color: "#666666",
   },
   scrollView: {
     flex: 1,
@@ -284,11 +481,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: "Afacad_700Bold",
     fontSize: 18,
-    color: "#000000",
+    color: "#FFFFFF",
   },
   emptyText: {
     fontFamily: getAfacadFont(),
-    color: "#666666",
+    color: "#dfc7f2",
     fontSize: 14,
     textAlign: "center",
     marginTop: 20,
@@ -344,16 +541,16 @@ const styles = StyleSheet.create({
   completedCheckbox: {
   },
   bottomButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#93E1D8",
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 50,
     alignItems: "center",
   },
   bottomButtonText: {
     fontFamily: "Afacad_600SemiBold",
-    color: "#FFFFFF",
+    color: "#363946",
     fontSize: 16,
   },
 });
