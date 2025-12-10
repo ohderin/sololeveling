@@ -1786,25 +1786,6 @@ export default function Battle() {
               {renderEnemyMove()}
             </View>
             </Animated.View>
-
-            {/* Debug Button - Kill Wearywise */}
-            {battleModalVisible && (
-              <Pressable
-                style={styles.debugButton}
-                onPress={() => {
-                  console.log('Debug button pressed - killing Wearywise');
-                  // Set health to 0 and reset dying state
-                  setEnemyDying(false);
-                  setEnemyHealth(0);
-                  // Start death animation after a brief delay to ensure state is updated
-                  setTimeout(() => {
-                    startEnemyDeathAnimation();
-                  }, 50);
-                }}
-              >
-                <Text style={styles.debugButtonText}>DEBUG: Kill Wearywise</Text>
-              </Pressable>
-            )}
     </ImageBackground>
 
         </Modal>
@@ -2613,21 +2594,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
-  },
-  debugButton: {
-    position: 'absolute',
-    bottom: 100,
-    left: 20,
-    backgroundColor: '#FF0000',
-    padding: 10,
-    borderRadius: 8,
-    zIndex: 10001,
-    elevation: 10001,
-  },
-  debugButtonText: {
-    fontFamily: "Afacad_700Bold",
-    fontSize: 12,
-    color: '#FFFFFF',
   },
   checkboxContainer: {
     flexDirection: 'row',
