@@ -1,5 +1,6 @@
 import React from "react";
 import { View, StyleSheet, Image, Text, ImageSourcePropType, Platform } from "react-native";
+import { defaultTextStyle } from "../utils/defaultTextStyle";
 
 interface BattleCharacterProps {
   imageSource: ImageSourcePropType;
@@ -99,8 +100,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   name: {
+    ...defaultTextStyle,
     fontSize: 20,
-    fontFamily: "Jaro_400Regular",
     color: "#FFFFFF",
     marginBottom: 5,
     ...(Platform.select({
@@ -126,6 +127,7 @@ const styles = StyleSheet.create({
     zIndex: 10, // Ensure it appears on top of the image
   },
   elementalText: {
+    ...defaultTextStyle,
     fontSize: 16,
     color: "#FFFFFF",
     fontWeight: "bold",
@@ -161,10 +163,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF0000",
   },
   healthText: {
+    ...defaultTextStyle,
     fontSize: 14,
     color: "#FFFFFF",
     marginTop: 3,
-    fontFamily: "Jaro_400Regular",
     ...(Platform.select({
       web: {
         textShadow: "1px 1px 2px #000000",

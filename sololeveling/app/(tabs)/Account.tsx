@@ -2,6 +2,7 @@ import { FontAwesome, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { Text, View, StyleSheet, Button, Image, Pressable, Modal, FlatList, ScrollView } from "react-native";
+import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
 
 export default function Account() {
 
@@ -68,11 +69,11 @@ export default function Account() {
 
       <View style={{ flexDirection: 'row', marginLeft: '5%'}}>
         <Pressable style={styles.editProfileButton} onPress={() => setModalVisible(true)}>
-          <Text style={{ color: 'white', textAlign: 'center', fontSize: 16 }}>Edit Profile</Text>
+          <Text style={{ color: 'white', textAlign: 'center', fontSize: 16, fontFamily: getAfacadFont() }}>Edit Profile</Text>
         </Pressable>
         <View style={{ width: '3%' }} />
         <Pressable style={styles.settingsButton} onPress={() => router.push('/pages/settingsPage')}>
-          <Text style={{ color: 'black', textAlign: 'center', fontSize: 16,}}>Settings</Text>
+          <Text style={{ color: 'black', textAlign: 'center', fontSize: 16, fontFamily: getAfacadFont() }}>Settings</Text>
         </Pressable>
       </View>
 
@@ -108,7 +109,7 @@ export default function Account() {
         <Text style={styles.xpText}>{xp}/{xpGoal} XP • {xpPercent}%</Text>
       </View>
 
-      <Text style={{ fontSize: 18, marginLeft: 16 }}>Top Companions:</Text>
+      <Text style={{ fontSize: 18, marginLeft: 16, fontFamily: getAfacadFont() }}>Top Companions:</Text>
 
 
       <View style={{ alignItems: 'center', marginBottom: 8 }}>
@@ -278,7 +279,7 @@ export default function Account() {
               if (selectedIconKey) setPfpIconKey(selectedIconKey);
             }}
           >
-            <Text style={{ color: "white", fontWeight: "500", fontSize: 18 }}>Save</Text>
+            <Text style={{ color: "white", fontFamily: "Afacad_500Medium", fontSize: 18 }}>Save</Text>
           </Pressable>
         </View>
       </Modal>
@@ -313,13 +314,13 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   iconMiniLabel: {
+    fontFamily: "Afacad_500Medium",
     fontSize: 14,
-    fontWeight: "500",
     alignSelf: "center",
   },
   iconMiniStat: {
+    fontFamily: getAfacadFont(),
     fontSize: 12,
-    fontWeight: "400",
     alignSelf: "center",
     marginTop: 5,
   },
@@ -369,13 +370,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   boldSubtitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 28,
     color: "#000",
     marginLeft: 8,
     marginBottom: 4,
-    fontWeight: "700",
   },
   subtitle: {
+    fontFamily: getAfacadFont(),
     fontSize: 14,
     color: "#666666",
     marginLeft: 8,
@@ -393,12 +395,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   levelText: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 14,
-    fontWeight: "700",
     color: "#333",
   },
 
   bioText: {
+    fontFamily: getAfacadFont(),
     marginHorizontal: 16,
     alignSelf: "center",
     color: "#333",
@@ -424,11 +427,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statNumber: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 18,
-    fontWeight: "700",
     color: "#000",
   },
   statLabel: {
+    fontFamily: getAfacadFont(),
     fontSize: 12,
     color: "#666",
   },
@@ -453,9 +457,10 @@ const styles = StyleSheet.create({
   },
   xpBarFill: {
     height: "100%",
-    backgroundColor: "#017AFF",
+    backgroundColor: "#6320EE",
   },
   xpText: {
+    fontFamily: getAfacadFont(),
     marginTop: 6,
     fontSize: 12,
     color: "#666",
@@ -474,16 +479,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   quickActionText: {
+    fontFamily: "Afacad_600SemiBold",
     marginTop: 6,
     fontSize: 12,
     color: "#017AFF",
-    fontWeight: "600",
   },
 
   /* modal / selection UI */
   modalTitle: {
+    fontFamily: "Afacad_500Medium",
     fontSize: 20,
-    fontWeight: "500",
     marginBottom: 12,
   },
   checkmarkOverlay: {
@@ -570,7 +575,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 40,
     borderRadius: 6,
-    backgroundColor: "#017AFF",
+    backgroundColor: "#6320EE",
     alignContent: "center",
     justifyContent: "center",
   },

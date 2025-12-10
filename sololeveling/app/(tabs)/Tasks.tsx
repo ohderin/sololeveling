@@ -1,12 +1,12 @@
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable, Modal, ImageBackground } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getTasks, subscribe, Task, toggleTask, getDailyCompletions, hax, removeTask } from "../lib/taskStore";
+import { useAudioPlayer } from "expo-audio";
+import { getTasks, subscribe, Task, toggleTask, getDailyCompletions, hax } from "../lib/taskStore";
 import { getActionPoints, subscribeToAP } from "../lib/apStore";
 import { Alert } from "react-native";
 import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
-
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(getTasks());
@@ -16,6 +16,19 @@ export default function Tasks() {
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
   const [taskInfoModal, setTaskInfoModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const dingSound = useAudioPlayer(require('../barena_assets/ding!.wav'));
+
+  // Apply SFX volume to ding sound
+  useEffect(() => {
+    const updateVolume = () => {
+      const { getSFXVolume } = require('../lib/soundSettingsStore');
+      dingSound.volume = getSFXVolume() * 0.5; // Keep at 50% of SFX volume
+    };
+    updateVolume();
+    const { subscribe } = require('../lib/soundSettingsStore');
+    const unsubscribe = subscribe(updateVolume);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     // task store listener
@@ -82,7 +95,7 @@ export default function Tasks() {
           <Ionicons 
             name={notCompletedCollapsed ? "chevron-down" : "chevron-up"} 
             size={20} 
-            color="#FFF" 
+            color="#FFFFFF" 
           />
         </Pressable>
         {!notCompletedCollapsed && notCompletedTasks.length === 0 && (
@@ -96,6 +109,11 @@ export default function Tasks() {
               setTaskInfoModal(true);
               setSelectedTask(task);
             } }
+              // Play sound when marking task as completed (same approach as blippie sound)
+              dingSound.seekTo(0);
+              dingSound.play();
+              toggleTask(task.id);
+            }}
           >
             <View style={styles.taskContent}>
               <Text style={styles.taskTitle}>{task.name}</Text>
@@ -190,7 +208,7 @@ export default function Tasks() {
           <Ionicons 
             name={completedCollapsed ? "chevron-down" : "chevron-up"} 
             size={20} 
-            color="#FFF" 
+            color="#FFFFFF" 
           />
         </Pressable>
         {!completedCollapsed && completedTasks.length === 0 && (
@@ -229,6 +247,11 @@ export default function Tasks() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+<<<<<<< HEAD
+=======
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+>>>>>>> aaronmain
     paddingTop: 60,
   },
   safeArea: {
@@ -348,8 +371,8 @@ const styles = StyleSheet.create({
   },
   apContainer: {
     position: "absolute",
-    top: 55,
-    right: 20,
+    top: 40,
+    right: 10,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFBEB",
@@ -366,8 +389,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   apText: {
+    fontFamily: "Afacad_700Bold",
     color: "#B45309",
-    fontWeight: "800",
     fontSize: 14,
     marginLeft: 4,
   },

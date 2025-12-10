@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Text, View, StyleSheet, ScrollView, TouchableOpacity, Image, ImageBackground, Dimensions} from "react-native";
+import { Text, View, StyleSheet, ScrollView, TouchableOpacity, Image, ImageBackground, Dimensions, StatusBar} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import InfoBox from "../components/leaderboardEntry";
 import ProfileModal from "../components/ProfileModal";
 import { ProfilePicture } from "../utils/profilePicture";
+import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -30,7 +31,7 @@ export default function Leaderboard() {
                 threshold: 3,
                 reward: "🦇 Vampire Bat Wings",
                 rewardDescription: "Dark wings for the night's elite",
-                color: "#4B0082"
+                color: "#6056EA"
             },
             {
                 rank: "Top 10",
@@ -44,7 +45,7 @@ export default function Leaderboard() {
                 threshold: 50,
                 reward: "🕷️ Spider Web Badge",
                 rewardDescription: "Web-spinning badge for the crafty",
-                color: "#2F4F4F"
+                color: "#66A0C1"
             },
             {
                 rank: "Top 100",
@@ -206,10 +207,13 @@ export default function Leaderboard() {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="light-content" backgroundColor="#454851" />
+            <View style={styles.statusBarBackground} />
             <ImageBackground 
                 source={require('../placeholderImages/theme_background.jpg')} 
                 style={styles.backgroundImage}
                 resizeMode="cover"
+                blurRadius={9}
             >
                 <ScrollView 
                     contentContainerStyle={{
@@ -459,6 +463,16 @@ export default function Leaderboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#454851',
+  },
+  statusBarBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 50,
+    backgroundColor: '#454851',
+    zIndex: 1000,
   },
   backgroundImage: {
     flex: 1,
@@ -479,8 +493,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: screenWidth < 400 ? 24 : 28,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
   },
@@ -528,20 +542,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   expandIcon: {
+    fontFamily: getAfacadFont('bold'),
     fontSize: 16,
     color: '#FFFFFF',
     marginLeft: 12,
     fontWeight: 'bold',
   },
   rewardsTheme: {
+    fontFamily: "Afacad_700Bold",
     fontSize: screenWidth < 400 ? 18 : 20,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: screenWidth < 400 ? 2 : 4,
     lineHeight: screenWidth < 400 ? 22 : 24,
   },
   rewardsDescription: {
+    fontFamily: getAfacadFont(),
     fontSize: screenWidth < 400 ? 12 : 14,
     color: '#CCCCCC',
     textAlign: 'center',
@@ -559,18 +575,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tierRank: {
+    fontFamily: "Afacad_700Bold",
     fontSize: screenWidth < 400 ? 10 : 12,
-    fontWeight: 'bold',
     marginBottom: screenWidth < 400 ? 2 : 4,
   },
   tierReward: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: screenWidth < 400 ? 10 : 12,
-    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: screenWidth < 400 ? 2 : 4,
     textAlign: 'center',
   },
   tierDescription: {
+    fontFamily: getAfacadFont(),
     fontSize: screenWidth < 400 ? 8 : 10,
     color: '#CCCCCC',
     textAlign: 'center',
@@ -600,11 +617,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#B7B0FF',
   },
   switchText: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 14,
-    fontWeight: '600',
     color: '#FFFFFF',
   },
   switchTextActive: {
+    fontFamily: getAfacadFont('600'),
     color: '#FFFFFF',
   },
   yourRankContainer: {
@@ -627,8 +645,8 @@ const styles = StyleSheet.create({
     marginBottom: screenWidth < 400 ? 16 : 20,
   },
   yourRankTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: screenWidth < 400 ? 18 : 22,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     flex: 1,
   },
@@ -644,9 +662,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   yourRankBadgeText: {
+    fontFamily: "Afacad_700Bold",
     color: '#FFFFFF',
     fontSize: screenWidth < 400 ? 14 : 16,
-    fontWeight: 'bold',
   },
   yourRankStats: {
     flexDirection: 'row',
@@ -670,15 +688,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   yourRankStatValue: {
+    fontFamily: "Afacad_700Bold",
     fontSize: screenWidth < 400 ? 16 : 18,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 2,
   },
   yourRankStatLabel: {
+    fontFamily: "Afacad_500Medium",
     fontSize: screenWidth < 400 ? 11 : 12,
     color: '#CCCCCC',
-    fontWeight: '500',
   },
   yourRewardSection: {
     backgroundColor: 'rgba(60, 60, 60, 0.8)',
@@ -688,8 +706,8 @@ const styles = StyleSheet.create({
     borderColor: '#FFD54F',
   },
   yourRewardTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: screenWidth < 400 ? 16 : 18,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: screenWidth < 400 ? 12 : 16,
@@ -706,10 +724,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   yourRewardEmoji: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: screenWidth < 400 ? 24 : 26,
     marginBottom: screenWidth < 400 ? 8 : 12,
   },
   yourRewardDescription: {
+    fontFamily: getAfacadFont(),
     fontSize: screenWidth < 400 ? 12 : 14,
     color: '#CCCCCC',
     textAlign: 'center',
@@ -720,8 +740,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   podiumTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 20,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 15,
@@ -796,6 +816,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   podiumName: {
+    fontFamily: getAfacadFont('600'),
     fontSize: screenWidth < 400 ? 12 : 14,
     fontWeight: '600',
     color: '#FFFFFF',
@@ -803,18 +824,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   podiumNameCenter: {
+    fontFamily: "Afacad_700Bold",
     fontSize: screenWidth < 400 ? 14 : 16,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 4,
   },
   podiumTasks: {
+    fontFamily: getAfacadFont(),
     fontSize: screenWidth < 400 ? 10 : 12,
     color: '#CCCCCC',
     textAlign: 'center',
   },
   podiumTasksCenter: {
+    fontFamily: getAfacadFont('600'),
     fontSize: screenWidth < 400 ? 11 : 14,
     color: '#CCCCCC',
     textAlign: 'center',
@@ -824,8 +847,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   leaderboardTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 18,
-    fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 15,
@@ -890,16 +913,18 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   rankNumber: {
-    color: '#FFFFFF',
+    fontFamily: "Afacad_700Bold",
+    color: '#333333',
     fontSize: 14,
-    fontWeight: 'bold',
   },
   subtitle: {
+    fontFamily: getAfacadFont(),
     fontSize: 24,
     color: "#666666",
     marginBottom: 20,
   },
   description: {
+    fontFamily: getAfacadFont(),
     fontSize: 16,
     color: "#888888",
     textAlign: "center",

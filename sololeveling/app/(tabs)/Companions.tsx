@@ -2,9 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView, Modal, PanResponder, Animated } from "react-native";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useAudioPlayer } from "expo-audio";
 import creatures from "../data/companions.json";
+import { defaultTextStyle } from "../utils/defaultTextStyle";
 import { getTeamMembers, toggleTeamMember as toggleTeamMemberStore, subscribe } from "../lib/teamStore";
 import { getCompanionHealth, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
+import { getActionPoints, subscribeToAP } from "../lib/apStore";
 import { Background } from "@react-navigation/elements";
 
 const getCompanionImage = (imageName: string) => {
@@ -73,11 +76,41 @@ export default function Companions() {
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState<number[]>(getTeamMembers());
   const [showMenu, setShowMenu] = useState(false);
+  const [ap, setAp] = useState<number>(getActionPoints());
+  const blippieSound = useAudioPlayer(require('../barena_assets/blippie.wav'));
+  const errorSound = useAudioPlayer(require('../barena_assets/error.wav'));
+  
+  // Apply SFX volume to sound effects
+  useEffect(() => {
+    const updateVolumes = () => {
+      const { getSFXVolume } = require('../lib/soundSettingsStore');
+      const sfxVol = getSFXVolume();
+      blippieSound.volume = sfxVol;
+      errorSound.volume = sfxVol;
+    };
+    updateVolumes();
+    const { subscribe } = require('../lib/soundSettingsStore');
+    const unsubscribe = subscribe(updateVolumes);
+    return unsubscribe;
+  }, []);
+
+  // Initialize error sound volume
+  useEffect(() => {
+    errorSound.volume = 1.0;
+  }, []);
   
   // Subscribe to team changes
   useEffect(() => {
     const unsubscribe = subscribe(() => {
       setTeamMembers(getTeamMembers());
+    });
+    return unsubscribe;
+  }, []);
+
+  // Subscribe to AP changes
+  useEffect(() => {
+    const unsubscribe = subscribeToAP(() => {
+      setAp(getActionPoints());
     });
     return unsubscribe;
   }, []);
@@ -154,6 +187,18 @@ export default function Companions() {
   const [showHungryModal, setShowHungryModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [hungryCompanionId, setHungryCompanionId] = useState<number | null>(null);
+
+  // Play error sound when hungry modal appears
+  useEffect(() => {
+    if (showHungryModal && hungryCompanionId) {
+      // Use setTimeout to ensure the modal is visible before playing sound
+      const timer = setTimeout(() => {
+        errorSound.seekTo(0);
+        errorSound.play();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showHungryModal, hungryCompanionId]);
   const [actionPoints, setActionPoints] = useState<number | null>(null);
   
   // State for each companion's stats
@@ -210,6 +255,13 @@ export default function Companions() {
 
 
   const updateStat = (stat: "attack" | "maxHp" | "defense" | "level", delta: number) => {
+    // Play sound effect when incrementing stats (only for positive deltas)
+    if (delta > 0 && (stat === "attack" || stat === "maxHp" || stat === "defense")) {
+      // Reset and play the sound effect
+      blippieSound.seekTo(0);
+      blippieSound.play();
+    }
+    
     setCompanionStats((prev) => ({
       ...prev,
       [selectedCompanionId]: {
@@ -225,7 +277,7 @@ export default function Companions() {
     
     // Check if companion is hungry (hunger is 0)
     if (stats && stats.hunger === 0 && !teamMembers.includes(companionId)) {
-      // Show hungry modal
+      // Show hungry modal (error sound will play via useEffect)
       setHungryCompanionId(companionId);
       setShowHungryModal(true);
       return;
@@ -456,14 +508,22 @@ export default function Companions() {
             
             {/* Companion Image and Name */}
             <View style={styles.companionContent}>
-              <View style={styles.nameContainer}>
-                <Text style={styles.companionName}>{selectedCompanion.name}</Text>
-                {/* Elemental Indicator */}
-                <Image
-                  source={getElementalIndicator(selectedCompanion.name)}
-                  style={styles.elementalIndicator}
-                  resizeMode="contain"
-                />
+              <View style={styles.nameAndAPRow}>
+                <View style={styles.apContainerInline}>
+                  <Ionicons name="flash" size={14} color="#F59E0B" />
+                  <Text style={styles.apTextInline}>{ap}</Text>
+                </View>
+                <View style={styles.apSpacer} />
+                <View style={styles.nameContainer}>
+                  <Text style={styles.companionName}>{selectedCompanion.name}</Text>
+                  {/* Elemental Indicator */}
+                  <Image
+                    source={getElementalIndicator(selectedCompanion.name)}
+                    style={styles.elementalIndicator}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.apSpacer} />
               </View>
               <View style={styles.imageWrapper}>
                 <Image
@@ -473,14 +533,14 @@ export default function Companions() {
                 />
               </View>
               <View style={styles.levelTextContainer}>
-                <Text style={{fontSize: 16, color: "white"}}>Level </Text>
+                <Text style={[defaultTextStyle, {fontSize: 16, color: "white"}]}>Level </Text>
                 <Text style={styles.levelText}>
                   {
                     stats?.level ?? selectedCompanion?.baseStats?.level ?? 'Lv —'
                   }
                 </Text>
-                <Text style={{fontSize: 16, color: "white"}}> / </Text>
-                <Text style={{fontSize: 16, color: "#acacacff"}}>30</Text>
+                <Text style={[defaultTextStyle, {fontSize: 16, color: "white"}]}> / </Text>
+                <Text style={[defaultTextStyle, {fontSize: 16, color: "#acacacff"}]}>30</Text>
                 {maxLevelView}
               </View>
               {/* Health and Hunger Bars */}
@@ -712,6 +772,38 @@ export default function Companions() {
 }
 
 const styles = StyleSheet.create({
+  nameAndAPRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  apContainerInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  apSpacer: {
+    flex: 1,
+  },
+  apTextInline: {
+    fontFamily: "Afacad_700Bold",
+    color: "#B45309",
+    fontSize: 12,
+    marginLeft: 3,
+  },
   mainContainer: {
     flex: 1,
     backgroundColor: "#FFFFFF",
@@ -893,10 +985,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   levelText:{
+    ...defaultTextStyle,
     fontSize: 16,
     color: "white",
   },
   feedButtonText:{
+    ...defaultTextStyle,
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "500",
@@ -906,6 +1000,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   companionName: {
+    ...defaultTextStyle,
     fontSize: 22,
     fontWeight: "600",
     color: "#FFFFFF",
@@ -920,6 +1015,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   healthText: {
+    ...defaultTextStyle,
     fontSize: 14,
     color: "#FFFFFF",
     marginTop: 2,
@@ -930,6 +1026,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   healthBarLabel: {
+    ...defaultTextStyle,
     fontSize: 14,
     fontWeight: "500",
     marginBottom: 6,
@@ -965,8 +1062,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   statLabel: {
-    fontSize: 20,
-    fontWeight: "500",
+    fontFamily: "Afacad_700Bold",
+    fontSize: 22,
     color: "#333",
     marginLeft: 15
   },
@@ -984,11 +1081,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statButtonText: {
+    ...defaultTextStyle,
     color: "black",
     fontSize: 20,
     fontWeight: "600",
   },
   statValue: {
+    ...defaultTextStyle,
     fontSize: 18,
     fontWeight: "600",
     minWidth: 40,
@@ -1002,7 +1101,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#454851",
     borderRadius: 20,
     padding: 24,
     alignItems: "center",
@@ -1020,14 +1119,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
+    ...defaultTextStyle,
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 8,
-    color: "#333",
+    color: "#FFF",
   },
   modalText: {
+    ...defaultTextStyle,
     fontSize: 16,
-    color: "#666",
+    color: "#CCC",
     textAlign: "center",
     marginBottom: 24,
   },
@@ -1051,19 +1152,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#E0E0E0",
   },
   modalButtonConfirm: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#6320EE",
   },
   modalButtonTextCancel: {
+    ...defaultTextStyle,
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
   },
   modalButtonTextReset: {
+    ...defaultTextStyle,
     fontSize: 16,
     fontWeight: "600",
     color: "#FFF",
   },
   modalButtonTextConfirm: {
+    ...defaultTextStyle,
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",

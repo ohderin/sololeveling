@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Redirect, router } from "expo-router";
 import React, { use, useState } from "react";
 import { Text, View, StyleSheet, Button, TextInput, Pressable, Switch, Alert } from "react-native";
+import { defaultTextStyle } from "./utils/defaultTextStyle";
 
 export default function Login() {
 
@@ -63,9 +64,9 @@ export default function Login() {
             <TextInput
                 placeholder="Email"
                 placeholderTextColor="#C7C7C7"
-                style={{
+                style={[defaultTextStyle, {
                 height: 50, backgroundColor: '#E9E9E9', width: '100%', paddingHorizontal: 10, borderRadius: 6, color: '#000'
-                }}
+                }]}
                 onChangeText={(text) => username[1](text)}
                 value={username[0]}
             />
@@ -75,9 +76,9 @@ export default function Login() {
                 <TextInput
                     placeholder="Password"
                     placeholderTextColor="#C7C7C7"
-                    style={{
+                    style={[defaultTextStyle, {
                     height: 50, backgroundColor: '#E9E9E9', width: '100%', paddingHorizontal: 10, borderRadius: 6, color: '#000'
-                    }}
+                    }]}
                     secureTextEntry={!showPassword}
                     onChangeText={(text) => password[1](text)}
                     value={password[0]}
@@ -140,28 +141,33 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   subtitle: {
+    ...defaultTextStyle,
     fontSize: 20,
     color: "Black",
     marginBottom: 20,
     fontWeight: "300",
   },
   boldSubtitle: {
+    ...defaultTextStyle,
     fontSize: 20,
     color: "Black",
     marginBottom: 20,
     fontWeight: "800",
   },
   title: {
+    ...defaultTextStyle,
     fontSize: 35,
     color: "Black",
     marginBottom: 10,
     fontWeight: "800",
   },
   subTitleSmall: {
+    ...defaultTextStyle,
     fontSize: 18,
     color: "black",
   },
   description: {
+    ...defaultTextStyle,
     fontSize: 14,
     color: "black",
     textAlign: "center",
@@ -169,6 +175,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   descriptionBold: {
+    ...defaultTextStyle,
     fontSize: 14,
     color: "#017AFF",
     textAlign: "center",

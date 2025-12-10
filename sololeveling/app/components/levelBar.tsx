@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, Button, StyleSheet, DimensionValue } from "react-native";
+import { defaultTextStyle } from "../utils/defaultTextStyle";
 
 interface LevelBarProps {
     label?: string;
@@ -40,6 +41,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   label: {
+    ...defaultTextStyle,
     fontSize: 18,
   },
   barContainer: {
@@ -56,6 +58,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#4caf50",
   },
   text: {
+    ...defaultTextStyle,
     color: "black",
     marginTop: 5,
     fontSize: 12,

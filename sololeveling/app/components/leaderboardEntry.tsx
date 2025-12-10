@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { ProfilePicture } from '../utils/profilePicture';
+import { defaultTextStyle } from '../utils/defaultTextStyle';
 
 interface InfoBoxProps {
   text: string;           // text content
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginVertical: 8,
     padding: 10,
-    backgroundColor: 'lightgray',
+    backgroundColor: 'rgba(50, 50, 50, 0.8)',
   },
   profileSection: {
     flexDirection: 'row',
@@ -61,13 +62,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nameText: {
-    color: '#000000',
+    ...defaultTextStyle,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
   },
   taskText: {
-    color: '#666666',
+    ...defaultTextStyle,
+    color: '#CCCCCC',
     fontSize: 12,
   },
 });

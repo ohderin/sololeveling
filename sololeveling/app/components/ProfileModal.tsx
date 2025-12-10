@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { ProfilePicture } from '../utils/profilePicture';
+import { defaultTextStyle, getAfacadFont } from '../utils/defaultTextStyle';
 
 interface ProfileModalProps {
   visible: boolean;
@@ -163,16 +164,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#454851',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: screenHeight * 0.7,
     minHeight: screenHeight * 0.4,
+    borderTopWidth: 1,
+    borderTopColor: '#8a8a8aff',
   },
   handleBar: {
     width: 40,
     height: 4,
-    backgroundColor: '#ccc',
+    backgroundColor: '#8a8a8aff',
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 8,
@@ -193,14 +196,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   profileName: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   profileRank: {
+    fontFamily: getAfacadFont(),
     fontSize: 16,
-    color: '#666',
+    color: '#CCCCCC',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -209,65 +213,73 @@ const styles = StyleSheet.create({
   },
   statBox: {
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'rgba(69, 72, 81, 0.95)',
     padding: 16,
     borderRadius: 12,
     minWidth: 100,
+    borderWidth: 1,
+    borderColor: '#8a8a8aff',
   },
   statNumber: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   statLabel: {
+    fontFamily: getAfacadFont(),
     fontSize: 12,
-    color: '#666',
+    color: '#CCCCCC',
     textAlign: 'center',
   },
   rewardContainer: {
     marginBottom: 20,
   },
   rewardBox: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'rgba(69, 72, 81, 0.95)',
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
     alignItems: 'center',
   },
   rewardTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 20,
-    fontWeight: 'bold',
     marginBottom: 4,
   },
   rewardSubtitle: {
+    fontFamily: getAfacadFont(),
     fontSize: 14,
-    color: '#666',
+    color: '#CCCCCC',
     marginBottom: 8,
   },
   rewardDescription: {
+    fontFamily: getAfacadFont(),
     fontSize: 12,
-    color: '#888',
+    color: '#CCCCCC',
     textAlign: 'center',
   },
   achievementsContainer: {
     marginTop: 8,
   },
   sectionTitle: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    color: '#FFFFFF',
     marginBottom: 12,
   },
   achievementItem: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'rgba(69, 72, 81, 0.95)',
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#8a8a8aff',
   },
   achievementText: {
+    fontFamily: getAfacadFont(),
     fontSize: 14,
-    color: '#555',
+    color: '#CCCCCC',
   },
 });
 
