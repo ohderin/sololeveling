@@ -11,5 +11,6 @@
   { "id": 10, "name": "Bron", "type": "Swift",   "image": "aron.png", "baseStats": { "health": 57, "attack": 8,  "defense": 13, "level": 12  } },
   { "id": 11, "name": "Slumberpaw", "type": "Swift", "image": "Slumberpaw.png", "baseStats": { "health": 55, "attack": 9, "defense": 13, "level": 12 } },
   { "id": 12, "name": "Flitterfinch", "type": "Elemental", "image": "Flitterfinch.png", "baseStats": { "health": 48, "attack": 12, "defense": 10, "level": 15} },
-  { "id": 13, "name": "Tickhare", "type": "Power", "image": "Tickhare.png", "baseStats": { "health": 52, "attack": 11, "defense": 12, "level": 7 } }
+  { "id": 13, "name": "Tickhare", "type": "Power", "image": "Tickhare.png", "baseStats": { "health": 52, "attack": 11, "defense": 12, "level": 7 } },
+  { "id": 14, "name": "Wearywise", "type": "Power", "image": "Wearywise.png", "baseStats": { "health": 100, "attack": 15, "defense": 15, "level": 20 } }
 ]

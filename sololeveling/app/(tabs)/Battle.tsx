@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Text, View, StyleSheet, Pressable, Image, Modal, ImageBackground, Animated, ScrollView, Dimensions, PanResponder, TouchableOpacity, Platform} from "react-native";
+import { router } from "expo-router";
 import { Ionicons, FontAwesome5, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,9 +9,20 @@ import { getTeamMembers, subscribe, toggleTeamMember, addTeamMember, removeTeamM
 import { getCompanionHealth, setCompanionHealth, takeCompanionDamage, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
 import { getTasks, subscribe as subscribeTasks, Task } from "../lib/taskStore";
 import creatures from "../data/companions.json";
-import { getActionPoints, spendAPForAttack, subscribeToAP } from "../lib/apStore";
+import { getActionPoints, spendAPForAttack, spendActionPoints, subscribeToAP } from "../lib/apStore";
 import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
 import { setBattleMusicPlaying } from "../components/BackgroundMusic";
+import { getOwnedCompanionNames, addOwnedCompanion, subscribe as subscribeCompanions } from "../lib/companionStore";
+
+// AsyncStorage for AP warning preference
+let AsyncStorage: any = null;
+try {
+  AsyncStorage = require('@react-native-async-storage/async-storage').default;
+} catch (e) {
+  console.log('AsyncStorage not available for AP warning preference');
+}
+
+const AP_WARNING_DISMISSED_KEY = '@battle_ap_warning_dismissed';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -27,10 +39,8 @@ const getCompanionImage = (imageName: string) => {
 
 // Filter to only show companions the user has
 const getUserCompanions = () => {
-  // This will be updated when Wearywise is added
-  return creatures.filter(
-    (c) => c.name === "Tickhare" || c.name === "Slumberpaw" || c.name === "Flitterfinch" || c.name === "Wearywise"
-  );
+  const ownedNames = getOwnedCompanionNames();
+  return creatures.filter((c) => ownedNames.includes(c.name));
 };
 
 export default function Battle() {
@@ -53,9 +63,13 @@ export default function Battle() {
   const [dyingCompanions, setDyingCompanions] = useState<Set<number>>(new Set());
   const [enemyDying, setEnemyDying] = useState(false);
   const [showEnemyHelpModal, setShowEnemyHelpModal] = useState(false);
+  const [showWearywiseWelcomeModal, setShowWearywiseWelcomeModal] = useState(false);
+  const [showBattleCompleteOverlay, setShowBattleCompleteOverlay] = useState(false);
   const [userCompanions, setUserCompanions] = useState(getUserCompanions());
   const [ap, setAp] = useState(getActionPoints());
   const [showNoAPWarning, setShowNoAPWarning] = useState(false);
+  const [showAPWarningModal, setShowAPWarningModal] = useState(false);
+  const [dontShowAPWarning, setDontShowAPWarning] = useState(false);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -85,6 +99,23 @@ export default function Battle() {
     const unsubscribe = subscribe(updateVolumes);
     return unsubscribe;
   }, []);
+
+  // Initialize error sound volume
+  useEffect(() => {
+    errorSound.volume = 1.0;
+  }, []);
+
+  // Play error sound when no AP warning appears
+  useEffect(() => {
+    if (showNoAPWarning) {
+      // Use setTimeout to ensure the warning is visible before playing sound
+      const timer = setTimeout(() => {
+        errorSound.seekTo(0);
+        errorSound.play();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showNoAPWarning]);
   const battleMusicVolumeAnim = useRef(new Animated.Value(0)).current;
   const redPulseAnim = useRef(new Animated.Value(0)).current;
   const deathAnimations = useRef<{ [key: number]: { saturation: Animated.Value; scale: Animated.Value } }>({});
@@ -168,6 +199,25 @@ export default function Battle() {
     });
     return unsubscribe;
   }, []);
+
+  // Subscribe to companion health changes
+  useEffect(() => {
+    const unsubscribe = subscribeHealth(() => {
+      // Update companionHealths state when health changes in store
+      const updatedHealths: { [key: number]: number } = {};
+      teamMembers.forEach(companionId => {
+        updatedHealths[companionId] = getCompanionHealth(companionId);
+      });
+      if (activeCompanionId) {
+        updatedHealths[activeCompanionId] = getCompanionHealth(activeCompanionId);
+      }
+      setCompanionHealths(prev => ({
+        ...prev,
+        ...updatedHealths
+      }));
+    });
+    return unsubscribe;
+  }, [teamMembers, activeCompanionId]);
 
   // Monitor companion health and start death animation if health is 0 or lower
   useEffect(() => {
@@ -286,7 +336,23 @@ export default function Battle() {
     }
   }, [battleModalVisible]);
 
-  // Transition animation sequence
+  // Load AP warning preference on mount
+  useEffect(() => {
+    const loadAPWarningPreference = async () => {
+      if (!AsyncStorage) return;
+      try {
+        const dismissed = await AsyncStorage.getItem(AP_WARNING_DISMISSED_KEY);
+        if (dismissed === 'true') {
+          setDontShowAPWarning(true);
+        }
+    } catch (error) {
+        console.error('Error loading AP warning preference:', error);
+      }
+    };
+    loadAPWarningPreference();
+  }, []);
+
+  // Actual battle transition function
   const startBattleTransition = () => {
     // Check if team has at least one companion
     if (teamMembers.length === 0) {
@@ -347,8 +413,8 @@ export default function Battle() {
         Animated.timing(exclamationAnim, {
         toValue: 0,
           duration: 300,
-          useNativeDriver: true,
-        }),
+        useNativeDriver: true,
+      }),
       ]),
     ]).start(() => {
       // After transition, show battle scene
@@ -359,6 +425,76 @@ export default function Battle() {
       setShowCreatureSelect(false);
       setBattleModalVisible(true);
     });
+  };
+
+  // Wrapper function to check AP warning preference before starting battle
+  const handleStartBattleClick = () => {
+    const AP_COST_BATTLE = 10;
+    
+    // Check if user has enough AP
+    if (ap < AP_COST_BATTLE) {
+      setShowNoAPWarning(true);
+      setTimeout(() => setShowNoAPWarning(false), 2000);
+      return;
+    }
+    
+    // Check if user has dismissed the warning
+    if (dontShowAPWarning) {
+      // Spend 10 AP directly if warning is dismissed
+      const success = spendActionPoints(AP_COST_BATTLE);
+      if (!success) {
+        setShowNoAPWarning(true);
+        setTimeout(() => setShowNoAPWarning(false), 2000);
+        return;
+      }
+      startBattleTransition();
+      return;
+    }
+    
+    // Show warning modal
+    setShowAPWarningModal(true);
+  };
+
+  // Confirm AP warning and proceed with battle
+  const confirmAPWarning = async () => {
+    const AP_COST_BATTLE = 10;
+    
+    // Check if user has enough AP
+    if (ap < AP_COST_BATTLE) {
+      setShowAPWarningModal(false);
+      setShowNoAPWarning(true);
+      setTimeout(() => setShowNoAPWarning(false), 2000);
+      return;
+    }
+    
+    // Spend 10 AP
+    const success = spendActionPoints(AP_COST_BATTLE);
+    if (!success) {
+      setShowAPWarningModal(false);
+      setShowNoAPWarning(true);
+      setTimeout(() => setShowNoAPWarning(false), 2000);
+      return;
+    }
+    
+    // Save preference if checkbox is checked
+    if (dontShowAPWarning && AsyncStorage) {
+      try {
+        await AsyncStorage.setItem(AP_WARNING_DISMISSED_KEY, 'true');
+    } catch (error) {
+        console.error('Error saving AP warning preference:', error);
+      }
+    }
+    
+    setShowAPWarningModal(false);
+    
+    // Proceed with battle transition
+    startBattleTransition();
+  };
+
+  // Cancel AP warning
+  const cancelAPWarning = () => {
+    setShowAPWarningModal(false);
+    setDontShowAPWarning(false);
   };
 
   const handleStartBattle = () => {
@@ -415,8 +551,8 @@ export default function Battle() {
     // check and spend AP before attacking
     if (!spendAPForAttack()) {
       showAPWarning();
-      return;
-    }
+          return;
+        }
     // TODO: Implement button press action
   };
 
@@ -662,8 +798,11 @@ export default function Battle() {
     });
   }
 
-  function handleHelpEnemy() {
-    // Add Wearywise to user companions
+  async function handleHelpEnemy() {
+    // Add Wearywise to owned companions
+    await addOwnedCompanion(ENEMY_NAME);
+    
+    // Update user companions list
     setUserCompanions(getUserCompanions());
     
     // Initialize health for Wearywise
@@ -672,13 +811,24 @@ export default function Battle() {
       initializeHealth(wearywise.id, wearywise.baseStats.health);
     }
     
+    // Close help modal and show welcome modal
     setShowEnemyHelpModal(false);
+    setShowWearywiseWelcomeModal(true);
+  }
+
+  function handleWearywiseWelcomeClose() {
+    setShowWearywiseWelcomeModal(false);
+    // Show battle complete overlay on select team screen
+    setShowBattleCompleteOverlay(true);
+    // Close battle modal
     setBattleModalVisible(false);
     setBattleStarted(false);
     setEnemyHealth(100);
     setEnemyDying(false);
     enemyDeathAnim.saturation.setValue(1);
     enemyDeathAnim.scale.setValue(1);
+    // Navigate to companions screen
+    router.push('/(tabs)/Companions' as any);
   }
 
   function handleDeclineHelpEnemy() {
@@ -908,7 +1058,7 @@ export default function Battle() {
                   return completedDailyTasks.length < 3 ? styles.startBattleButtonDisabled : null;
                 })()
               ]} 
-              onPress={startBattleTransition}
+              onPress={handleStartBattleClick}
               disabled={(() => {
                 const completedDailyTasks = tasks.filter(task => 
                   task.completed && task.duration === "daily"
@@ -931,7 +1081,7 @@ export default function Battle() {
             task.completed && task.duration === "daily"
           );
           const completedCount = completedDailyTasks.length;
-          const isLocked = completedCount < 3;
+          const isLocked = completedCount < 10;
           
           if (isLocked) {
             return (
@@ -939,7 +1089,7 @@ export default function Battle() {
                 <View style={styles.battleLockContent}>
                   <Ionicons name="lock-closed" size={80} color="#FFFFFF" />
                   <Text style={styles.battleLockText}>
-                    Complete {completedCount}/3 tasks today to unlock battle encounter
+                    Complete {completedCount}/10 tasks today to unlock battle encounter
                   </Text>
                 </View>
               </View>
@@ -947,6 +1097,18 @@ export default function Battle() {
           }
           return null;
         })()}
+
+        {/* Battle Complete Overlay - on select team screen */}
+        {showBattleCompleteOverlay && (
+          <View style={styles.battleCompleteOverlay}>
+            <View style={styles.battleCompleteContent}>
+              <Text style={styles.battleCompleteText}>
+                Come back tomorrow for your next daily battle!
+              </Text>
+            </View>
+          </View>
+        )}
+
       </ImageBackground>
 
         <Modal visible={teamModalVisible} animationType="slide" transparent onRequestClose={() => {
@@ -1097,7 +1259,7 @@ export default function Battle() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Help {ENEMY_NAME} up?</Text>
               <Text style={styles.modalText}>
-                Would you like to help {ENEMY_NAME}? They will become your companion.
+                Would you like to help {ENEMY_NAME}? They have a chance to become your companion.
               </Text>
               <View style={styles.modalButtons}>
                 <TouchableOpacity
@@ -1111,6 +1273,31 @@ export default function Battle() {
                   onPress={handleHelpEnemy}
                 >
                   <Text style={styles.modalButtonTextConfirm}>Yes</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Wearywise Welcome Modal */}
+        <Modal
+          visible={showWearywiseWelcomeModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={handleWearywiseWelcomeClose}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Wearywise took your hand!</Text>
+              <Text style={styles.modalText}>
+                Welcome Wearywise to your team!
+              </Text>
+              <View style={[styles.modalButtons, { justifyContent: 'center' }]}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonConfirm, { flex: 0, minWidth: 120 }]}
+                  onPress={handleWearywiseWelcomeClose}
+                >
+                  <Text style={styles.modalButtonTextConfirm}>Okay</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1599,7 +1786,75 @@ export default function Battle() {
               {renderEnemyMove()}
             </View>
             </Animated.View>
+
+            {/* Debug Button - Kill Wearywise */}
+            {battleModalVisible && (
+              <Pressable
+                style={styles.debugButton}
+                onPress={() => {
+                  console.log('Debug button pressed - killing Wearywise');
+                  // Set health to 0 and reset dying state
+                  setEnemyDying(false);
+                  setEnemyHealth(0);
+                  // Start death animation after a brief delay to ensure state is updated
+                  setTimeout(() => {
+                    startEnemyDeathAnimation();
+                  }, 50);
+                }}
+              >
+                <Text style={styles.debugButtonText}>DEBUG: Kill Wearywise</Text>
+              </Pressable>
+            )}
     </ImageBackground>
+
+        </Modal>
+
+        {/* AP Warning Modal */}
+        <Modal
+          visible={showAPWarningModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={cancelAPWarning}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Warning</Text>
+              <Text style={styles.modalText}>
+                You will spend 10 AP starting this battle. Are you sure you want to proceed?
+              </Text>
+              
+              {/* Do not show again checkbox */}
+              <Pressable 
+                style={styles.checkboxContainer}
+                onPress={() => setDontShowAPWarning(!dontShowAPWarning)}
+              >
+                <View style={[
+                  styles.checkbox,
+                  dontShowAPWarning && styles.checkboxChecked
+                ]}>
+                  {dontShowAPWarning && (
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  )}
+                </View>
+                <Text style={styles.checkboxLabel}>Do not show me again</Text>
+              </Pressable>
+
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={cancelAPWarning}
+                >
+                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalButton, styles.modalButtonConfirm]}
+                  onPress={confirmAPWarning}
+                >
+                  <Text style={styles.modalButtonTextConfirm}>Proceed</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
         </Modal>
     </>
   );
@@ -1890,7 +2145,7 @@ const styles = StyleSheet.create({
   healthBar: {
     width: "50%",
     height: 25,
-    borderColor: "#000",
+    borderColor: "#FFF",
     borderWidth: 2,
     backgroundColor: "#333",
     borderRadius: 5,
@@ -1952,7 +2207,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   title: { 
-    fontFamily: "Afacad_700Bold",
+    fontFamily: "Jaro_400Regular",
     fontSize: 20, 
     marginBottom: 10,
     color: "white",
@@ -2186,10 +2441,10 @@ const styles = StyleSheet.create({
     bottom: 50,
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: '#454851',
     borderRadius: 20,
     padding: 20,
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#fff',
     minHeight: 180,
   },
@@ -2198,7 +2453,7 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#6320EE',
     borderRadius: 15,
     padding: 8,
   },
@@ -2231,14 +2486,14 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   creatureSelectName: {
-    fontFamily: getAfacadFont(),
+    fontFamily: "Jaro_400Regular",
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
     marginTop: 5,
     textAlign: 'center',
   },
   creatureSelectNameActive: {
-    fontFamily: "Afacad_700Bold",
+    fontFamily: "Jaro_400Regular",
     fontSize: 18,
     color: 'white',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -2332,5 +2587,72 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+  },
+  battleCompleteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#363946',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10000,
+    elevation: 10000,
+  },
+  battleCompleteContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  battleCompleteText: {
+    fontFamily: "Afacad_700Bold",
+    fontSize: 24,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  debugButton: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    backgroundColor: '#FF0000',
+    padding: 10,
+    borderRadius: 8,
+    zIndex: 10001,
+    elevation: 10001,
+  },
+  debugButtonText: {
+    fontFamily: "Afacad_700Bold",
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    alignSelf: 'flex-start',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    borderRadius: 4,
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  checkboxChecked: {
+    backgroundColor: '#6320EE',
+    borderColor: '#6320EE',
+  },
+  checkboxLabel: {
+    fontFamily: getAfacadFont(),
+    fontSize: 14,
+    color: '#FFF',
   },
 });

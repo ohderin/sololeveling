@@ -8,6 +8,7 @@ import { defaultTextStyle } from "../utils/defaultTextStyle";
 import { getTeamMembers, toggleTeamMember as toggleTeamMemberStore, subscribe } from "../lib/teamStore";
 import { getCompanionHealth, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
 import { getActionPoints, subscribeToAP } from "../lib/apStore";
+import { getOwnedCompanionNames, subscribe as subscribeCompanions } from "../lib/companionStore";
 import { Background } from "@react-navigation/elements";
 
 const getCompanionImage = (imageName: string) => {
@@ -16,6 +17,7 @@ const getCompanionImage = (imageName: string) => {
     "Slumberpaw.png": require("../companionImages/Slumberpaw.png"),
     "Flitterfinch.png": require("../companionImages/Flitterfinch.png"),
     "Tickhare.png": require("../companionImages/Tickhare.png"),
+    "Wearywise.png": require("../companionImages/Wearywise.png"),
   };
   return imageMap[imageName] || require("../companionImages/aron.png");
 };
@@ -37,6 +39,7 @@ const getElementalIndicator = (companionName: string) => {
     "Tickhare": require("../companionImages/icons/fist.png"),
     "Slumberpaw": require("../companionImages/icons/magic.png"),
     "Flitterfinch": require("../companionImages/icons/wind.png"),
+    "Wearywise": require("../companionImages/icons/magic.png"),
     // Add more companions here as needed
   };
   return indicatorMap[companionName] || require("./companions_assets/Power.png");
@@ -61,17 +64,24 @@ const getNavImageStyle = (companionName: string) => {
       height: "100%",
       transform: [{ translateX: -10 }, { translateY: 32 }, { scale: 2.3 }],
     },
+    "Wearywise": {
+      width: "100%",
+      height: "100%",
+      transform: [{ translateX: 10 }, { translateY: 30 }, { scale: 2.5 }],
+    },
   };
   return imageStyles[companionName] || { width: "100%", height: "100%" };
 };
 
 // Filter to only show companions the user has
-const userCompanions = creatures.filter(
-  (c) => c.name === "Tickhare" || c.name === "Slumberpaw" || c.name === "Flitterfinch"
-);
+const getUserCompanions = () => {
+  const ownedNames = getOwnedCompanionNames();
+  return creatures.filter((c) => ownedNames.includes(c.name));
+};
 
 export default function Companions() {
   let maxLevelView, showAttackUpgrade, showHpUpgrade, showDefenseUpgrade;
+  const [userCompanions, setUserCompanions] = useState(getUserCompanions());
   const [selectedCompanionId, setSelectedCompanionId] = useState<number>(userCompanions[0]?.id || 1);
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState<number[]>(getTeamMembers());
@@ -114,6 +124,47 @@ export default function Companions() {
     });
     return unsubscribe;
   }, []);
+
+  // Subscribe to owned companions changes
+  useEffect(() => {
+    const unsubscribe = subscribeCompanions(() => {
+      // Use setTimeout to ensure updates happen after render
+      setTimeout(() => {
+        const updated = getUserCompanions();
+        setUserCompanions(updated);
+        // If current selected companion is no longer owned, select first available
+        if (updated.length > 0 && !updated.find(c => c.id === selectedCompanionId)) {
+          setSelectedCompanionId(updated[0].id);
+        }
+        // Update companion order
+        setCompanionOrder(updated.map(c => c.id));
+        // Initialize stats for any new companions
+        updated.forEach((c) => {
+          initializeHealth(c.id, c.baseStats.health);
+          setCompanionStats(prev => {
+            if (prev[c.id]) {
+              // Already exists, keep existing stats
+              return prev;
+            }
+            // New companion, initialize stats
+            const storedHealth = getCompanionHealth(c.id);
+            return {
+              ...prev,
+              [c.id]: {
+                attack: c.baseStats.attack,
+                maxHp: c.baseStats.health,
+                defense: c.baseStats.defense,
+                health: storedHealth,
+                hunger: c.name === "Flitterfinch" ? 0 : 65,
+                level: c.baseStats.level,
+              }
+            };
+          });
+        });
+      }, 0);
+    });
+    return unsubscribe;
+  }, [selectedCompanionId]);
 
   // Initialize health for all companions on mount
   useEffect(() => {
@@ -1000,9 +1051,8 @@ const styles = StyleSheet.create({
     height: 40,
   },
   companionName: {
-    ...defaultTextStyle,
+    fontFamily: "Jaro_400Regular",
     fontSize: 22,
-    fontWeight: "600",
     color: "#FFFFFF",
   },
   barsContainer: {

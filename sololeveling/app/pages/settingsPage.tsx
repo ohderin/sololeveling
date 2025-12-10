@@ -35,11 +35,11 @@ export default function SettingsPage() {
       <View style={styles.categoryContainer}>
         <Text style={styles.subtitle}>SOUND</Text>
         <View style={styles.soundOptionContainer}>
-          <Ionicons name="musical-notes-outline" size={24} color="#666666" style={{ marginLeft: '5%'}} />
+          <Ionicons name="musical-notes-outline" size={24} color="#ffffff" style={{ marginLeft: '5%'}} />
           <View style={styles.sliderContainer}>
             <View style={styles.sliderRow}>
-              <Text style={[defaultTextStyle, { fontSize: 16, color: 'black', fontFamily: getAfacadFont('500'), flex: 1 }]}>Background Music</Text>
-              <Text style={[defaultTextStyle, { fontSize: 14, color: '#666', fontFamily: getAfacadFont(), marginRight: 10 }]}>
+              <Text style={[defaultTextStyle, { fontSize: 16, color: 'white', fontFamily: getAfacadFont('500'), flex: 1 }]}>Background Music</Text>
+              <Text style={[defaultTextStyle, { fontSize: 14, color: 'white', fontFamily: getAfacadFont(), marginRight: 10 }]}>
                 {Math.round(bgmVolume * 100)}%
               </Text>
             </View>
@@ -57,11 +57,11 @@ export default function SettingsPage() {
           </View>
         </View>
         <View style={styles.soundOptionContainer}>
-          <Ionicons name="volume-high-outline" size={24} color="#666666" style={{ marginLeft: '5%'}} />
+          <Ionicons name="volume-high-outline" size={24} color="#ffffff" style={{ marginLeft: '5%'}} />
           <View style={styles.sliderContainer}>
             <View style={styles.sliderRow}>
-              <Text style={[defaultTextStyle, { fontSize: 16, color: 'black', fontFamily: getAfacadFont('500'), flex: 1 }]}>Sound Effects</Text>
-              <Text style={[defaultTextStyle, { fontSize: 14, color: '#666', fontFamily: getAfacadFont(), marginRight: 10 }]}>
+              <Text style={[defaultTextStyle, { fontSize: 16, color: 'white', fontFamily: getAfacadFont('500'), flex: 1 }]}>Sound Effects</Text>
+              <Text style={[defaultTextStyle, { fontSize: 14, color: 'white', fontFamily: getAfacadFont(), marginRight: 10 }]}>
                 {Math.round(sfxVolume * 100)}%
               </Text>
             </View>
@@ -88,7 +88,7 @@ export default function SettingsPage() {
         </View>
         <View style={styles.optionContainer}>
             <Ionicons name="color-palette-outline" size={30} color="#FFFFFF" style={{ marginLeft: '5%'}} />
-            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'black', fontWeight: '500'}]}>Theme</Text>
+            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'white', fontWeight: '500'}]}>Theme</Text>
             <Ionicons name="chevron-forward" size={24} color="#FFFFFF" style={{ position: 'absolute', right: '5%'}} />
         </View>
       </View>
@@ -96,17 +96,17 @@ export default function SettingsPage() {
         <Text style={styles.subtitle}>ABOUT THE APP</Text>
         <View style={styles.optionContainer}>
             <Ionicons name="heart-outline" size={30} color="#FFFFFF" style={{ marginLeft: '5%'}} />
-            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'black', fontWeight: '500'}]}>Rate</Text>
+            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'white', fontWeight: '500'}]}>Rate</Text>
             <Ionicons name="chevron-forward" size={24} color="#FFFFFF" style={{ position: 'absolute', right: '5%'}} />
         </View>
         <View style={styles.optionContainer}>
             <Ionicons name="share-outline" size={30} color="#FFFFFF" style={{ marginLeft: '5%'}} />
-            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'black', fontWeight: '500'}]}>Share</Text>
+            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'white', fontWeight: '500'}]}>Share</Text>
             <Ionicons name="chevron-forward" size={24} color="#FFFFFF" style={{ position: 'absolute', right: '5%'}} />
         </View>
         <View style={styles.optionContainer}>
             <Ionicons name="mail-outline" size={30} color="#FFFFFF" style={{ marginLeft: '5%'}} />
-            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'black', fontWeight: '500'}]}>Contact Us</Text>
+            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'white', fontWeight: '500'}]}>Contact Us</Text>
             <Ionicons name="chevron-forward" size={24} color="#FFFFFF" style={{ position: 'absolute', right: '5%'}} />
         </View>
       </View>
@@ -114,18 +114,18 @@ export default function SettingsPage() {
         <Text style={styles.subtitle}>MORE</Text>
         <View style={styles.optionContainer}>
             <Ionicons name="color-wand-outline" size={30} color="#FFFFFF" style={{ marginLeft: '5%'}} />
-            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'black', fontWeight: '500'}]}>Coming Soon</Text>
+            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'white', fontWeight: '500'}]}>Coming Soon</Text>
             <Ionicons name="chevron-forward" size={24} color="#FFFFFF" style={{ position: 'absolute', right: '5%'}} />
         </View>
         <View style={styles.optionContainer}>
             <Ionicons name="help-circle-outline" size={30} color="#FFFFFF" style={{ marginLeft: '5%'}} />
-            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'black', fontWeight: '500'}]}>Help</Text>
+            <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'white', fontWeight: '500'}]}>Help</Text>
             <Ionicons name="chevron-forward" size={24} color="#FFFFFF" style={{ position: 'absolute', right: '5%'}} />
         </View>
       </View>
       <View style={styles.categoryContainer}>
         <Text style={styles.subtitle}>ACCOUNT</Text>
-        <Pressable style={styles.optionContainer} onPress={() => router.replace('/login')}>
+        <Pressable style={styles.optionContainer} onPress={() => router.replace('/login' as any)}>
             <Ionicons name="log-out-outline" size={30} color="red" style={{ marginLeft: '5%'}} />
             <Text style={[defaultTextStyle, { marginLeft: '5%', fontSize: 18, color: 'red', fontWeight: '500'}]}>Log Out</Text>
         </Pressable>

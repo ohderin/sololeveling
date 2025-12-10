@@ -4,6 +4,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import React, { useEffect } from "react";
 import { useFonts } from "expo-font";
 import { Afacad_400Regular, Afacad_500Medium, Afacad_600SemiBold, Afacad_700Bold } from "@expo-google-fonts/afacad";
+import { Jaro_400Regular } from "@expo-google-fonts/jaro";
 import { Text, TextProps, StyleSheet } from "react-native";
 import BackgroundMusic from "./components/BackgroundMusic";
 
@@ -24,6 +25,7 @@ const StackLayout = () => {
     Afacad_500Medium,
     Afacad_600SemiBold,
     Afacad_700Bold,
+    Jaro_400Regular,
   });
 
   if (!fontsLoaded) {

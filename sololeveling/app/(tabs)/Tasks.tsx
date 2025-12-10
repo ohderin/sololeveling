@@ -1,11 +1,10 @@
 import { router } from "expo-router";
 import React, { useEffect, useState, useRef } from "react";
-import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable, Modal, ImageBackground } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable, Modal, ImageBackground, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
-import { getTasks, subscribe, Task, toggleTask, getDailyCompletions, hax } from "../lib/taskStore";
+import { getTasks, subscribe, Task, toggleTask, getDailyCompletions, hax, removeTask } from "../lib/taskStore";
 import { getActionPoints, subscribeToAP } from "../lib/apStore";
-import { Alert } from "react-native";
 import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
 
 export default function Tasks() {
@@ -108,11 +107,6 @@ export default function Tasks() {
             onPress={() => {
               setTaskInfoModal(true);
               setSelectedTask(task);
-            } }
-              // Play sound when marking task as completed (same approach as blippie sound)
-              dingSound.seekTo(0);
-              dingSound.play();
-              toggleTask(task.id);
             }}
           >
             <View style={styles.taskContent}>
@@ -120,7 +114,13 @@ export default function Tasks() {
             </View>
             <TouchableOpacity
               style={styles.taskCheckbox}
-              onPress={() => toggleTask(task.id)}
+              onPress={() => {
+                // Play sound when marking task as completed
+                dingSound.pause();
+                dingSound.seekTo(0);
+                dingSound.play();
+                toggleTask(task.id);
+              }}
             >
               <Ionicons name="ellipse-outline" size={28} color="#007AFF" />
             </TouchableOpacity>
@@ -215,26 +215,33 @@ export default function Tasks() {
           <Text style={styles.emptyText}>No completed tasks</Text>
         )}
         {!completedCollapsed && completedTasks.map((task) => (
-          <View 
-            key={task.id} 
+          <TouchableOpacity
+            key={task.id}
             style={[styles.taskCard, styles.completedCard]}
+            onPress={() => {
+              setTaskInfoModal(true);
+              setSelectedTask(task);
+            }}
           >
             <View style={styles.taskContent}>
               <Text style={styles.taskTitle}>{task.name}</Text>
             </View>
             <TouchableOpacity 
               style={[styles.taskCheckbox, styles.completedCheckbox]}
-              onPress={() => toggleTask(task.id)}
+              onPress={(e) => {
+                e.stopPropagation();
+                toggleTask(task.id);
+              }}
             >
               <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
 
       <TouchableOpacity 
         style={styles.bottomButton}
-        onPress={() => router.push('/pages/createTask')}
+        onPress={() => router.push('/pages/createTask' as any)}
       >
         <Text style={styles.bottomButtonText}>Add new task</Text>
       </TouchableOpacity>
@@ -247,11 +254,6 @@ export default function Tasks() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-<<<<<<< HEAD
-=======
-    backgroundColor: "#FFFFFF",
-    padding: 20,
->>>>>>> aaronmain
     paddingTop: 60,
   },
   safeArea: {
@@ -295,6 +297,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   priorityText: {
+    fontFamily: getAfacadFont(),
     fontSize: 18,
     color: "#FFF",
   },
@@ -317,9 +320,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
   },
   modalButtonTextCancel: {
+    fontFamily: "Afacad_500Medium",
     fontSize: 20,
     color: "black",
-    fontWeight: "500",
     alignSelf: 'center',
   },
   modalOverlay: {
@@ -351,12 +354,13 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   taskModalHeaderText: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 20,
     color: "#FFF",
-    fontWeight: "700",
     flexShrink: 1,
   },
   taskModalSubHeaderText: {
+    fontFamily: getAfacadFont('600'),
     alignSelf: 'flex-start',
     fontSize: 18,
     color: '#B7B0FF',
@@ -364,6 +368,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   taskModalText: {
+    fontFamily: getAfacadFont(),
     alignSelf: 'flex-start',
     fontSize: 18,
     color: '#FFF',
