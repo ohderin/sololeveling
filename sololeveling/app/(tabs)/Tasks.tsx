@@ -2,7 +2,8 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getTasks, subscribe, Task, toggleTask, getActionPoints, getDailyCompletions, hax } from "../lib/taskStore";
+import { getTasks, subscribe, Task, toggleTask, getDailyCompletions, hax } from "../lib/taskStore";
+import { getActionPoints, subscribeToAP } from "../lib/apStore";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(getTasks());
@@ -12,12 +13,22 @@ export default function Tasks() {
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
 
   useEffect(() => {
-    const unsub = subscribe(() => {
+    // task store listener
+    const unsubTasks = subscribe(() => {
       setTasks(getTasks());
       setAp(getActionPoints());
       setDailyCompletions(getDailyCompletions());
     });
-    return unsub;
+    
+    // ap store listener
+    const unsubAP = subscribeToAP(() => {
+      setAp(getActionPoints());
+    });
+    
+    return () => {
+      unsubTasks();
+      unsubAP();
+    };
   }, []);
 
   const completedTasks = tasks.filter(t => t.completed);

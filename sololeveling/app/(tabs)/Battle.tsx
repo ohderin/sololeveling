@@ -7,6 +7,7 @@ import { getTeamMembers, subscribe, toggleTeamMember, addTeamMember, removeTeamM
 import { getCompanionHealth, setCompanionHealth, takeCompanionDamage, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
 import { getTasks, subscribe as subscribeTasks, Task } from "../lib/taskStore";
 import creatures from "../data/companions.json";
+import { getActionPoints, spendAPForAttack, subscribeToAP } from "../lib/apStore";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -81,6 +82,23 @@ export default function Battle() {
         const currentHealth = companionHealths[activeCompanionId] ?? getCompanionHealth(activeCompanionId);
         const maxHealth = activeCompanion.baseStats.health;
         const healthPercentage = maxHealth > 0 ? (currentHealth / maxHealth) * 100 : 0;
+ 
+  // ap changes listener
+  useEffect(() => {
+    const unsub = subscribeToAP(() => {
+      setAp(getActionPoints());
+    });
+    return unsub;
+  }, []);
+
+  // ap 0 warning
+  const showAPWarning = () => {
+    setShowNoAPWarning(true);
+    setTimeout(() => {
+      setShowNoAPWarning(false);
+    }, 1000);
+  };
+
         
         if (healthPercentage <= 15) {
           // Start pulsing animation
@@ -362,6 +380,16 @@ export default function Battle() {
   const handleItems = () => {
     // TODO: Implement items functionality
     console.log("Items clicked");
+  const handleButtonPress = (action: string) => {
+    // check and spend AP before attacking
+    if (!spendAPForAttack()) {
+      showAPWarning();
+      return;
+    }
+    
+    console.log(`${action} selected`);
+    playHitSound();
+    animateTickhareAttack();
   };
 
   const handleFlee = () => {
@@ -785,6 +813,20 @@ export default function Battle() {
         style={styles.backgroundImage}
         resizeMode="cover"
         blurRadius={3}
+        
+         {/* AP Display - Top Right */}
+      <View style={styles.apContainer}>
+        <Ionicons name="flash" size={16} color="#F59E0B" />
+        <Text style={styles.apText}>{ap}</Text>
+      </View>
+
+      {/* Not Enough AP Warning */}
+      {showNoAPWarning && (
+        <View style={styles.noAPWarning}>
+          <Ionicons name="warning" size={16} color="#FFFFFF" />
+          <Text style={styles.noAPWarningText}>Not enough AP!</Text>
+        </View>
+      )}
       >
         <View style={styles.dimOverlay} />
         
@@ -1519,6 +1561,54 @@ const styles = StyleSheet.create({
   backgroundImageStyle: {
     width: "100%",
     height: "100%",
+  },
+  apContainer: {
+    position: "absolute",
+    top: 40,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
+  },
+  apText: {
+    color: "#B45309",
+    fontWeight: "800",
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  noAPWarning: {
+    position: "absolute",
+    top: 90,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1001,
+  },
+  noAPWarningText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
+    marginLeft: 6,
   },
   tickhareContainer: {
     position: "absolute",
