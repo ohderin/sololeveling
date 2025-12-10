@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, Button, ScrollView } from "react-native"
 import LevelBar from "../components/levelBar";
 import creatures from "../data/companions.json";
 import { getActionPoints, spendActionPoints, getEquippedCompanionId, subscribe } from "../lib/taskStore";
+import { defaultTextStyle } from "../utils/defaultTextStyle";
 
 export default function MyCompanion() {
   const [attack, setAttack] = useState(0);
@@ -67,15 +68,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   title: {
+    ...defaultTextStyle,
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 16,
   },
   apText: {
+    ...defaultTextStyle,
     marginBottom: 8,
     color: "#333333",
   },
   compName: {
+    ...defaultTextStyle,
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 8,
@@ -100,6 +104,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   feedText: {
+    ...defaultTextStyle,
     color: "#FFFFFF",
     fontWeight: "600",
   },

@@ -3,11 +3,14 @@ import { Text, View, StyleSheet, Pressable, Image, Modal, ImageBackground, Anima
 import { Ionicons, FontAwesome5, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { getTeamMembers, subscribe, toggleTeamMember, addTeamMember, removeTeamMember } from "../lib/teamStore";
 import { getCompanionHealth, setCompanionHealth, takeCompanionDamage, initializeHealth, subscribe as subscribeHealth } from "../lib/companionHealthStore";
 import { getTasks, subscribe as subscribeTasks, Task } from "../lib/taskStore";
 import creatures from "../data/companions.json";
 import { getActionPoints, spendAPForAttack, subscribeToAP } from "../lib/apStore";
+import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
+import { setBattleMusicPlaying } from "../components/BackgroundMusic";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -67,6 +70,21 @@ export default function Battle() {
   const enemyHitAnim = useRef(new Animated.Value(0)).current;
   const tackleSound = useAudioPlayer(require('../../assets/sounds/Tackle.mp3'));
   const battleMusic = useAudioPlayer(require('../../assets/sounds/Battle.mp3'));
+  const errorSound = useAudioPlayer(require('../barena_assets/error.wav'));
+  
+  // Apply SFX volume to sound effects
+  useEffect(() => {
+    const updateVolumes = () => {
+      const { getSFXVolume } = require('../lib/soundSettingsStore');
+      const sfxVol = getSFXVolume();
+      tackleSound.volume = sfxVol;
+      errorSound.volume = sfxVol;
+    };
+    updateVolumes();
+    const { subscribe } = require('../lib/soundSettingsStore');
+    const unsubscribe = subscribe(updateVolumes);
+    return unsubscribe;
+  }, []);
   const battleMusicVolumeAnim = useRef(new Animated.Value(0)).current;
   const redPulseAnim = useRef(new Animated.Value(0)).current;
   const deathAnimations = useRef<{ [key: number]: { saturation: Animated.Value; scale: Animated.Value } }>({});
@@ -218,6 +236,7 @@ export default function Battle() {
   // Play battle music with fade in/out when battle modal opens/closes
   useEffect(() => {
     if (battleModalVisible) {
+      // BGM is already muted when transition starts, just start battle music
       // Start with volume at 0 and fade in
       battleMusicVolumeAnim.setValue(0);
       battleMusic.loop = true;
@@ -240,6 +259,9 @@ export default function Battle() {
         battleMusicVolumeAnim.removeListener(listener);
       };
     } else {
+      // Unmute background music when battle ends
+      setBattleMusicPlaying(false);
+      
       // Fade out over 0.5 seconds
       Animated.timing(battleMusicVolumeAnim, {
         toValue: 0,
@@ -269,8 +291,14 @@ export default function Battle() {
     // Check if team has at least one companion
     if (teamMembers.length === 0) {
       setHasAttemptedStart(true);
+      // Play error sound
+      errorSound.seekTo(0);
+      errorSound.play();
       return; 
     }
+    
+    // Mute background music when transition begins
+    setBattleMusicPlaying(true);
     
     setHasAttemptedStart(false); // Reset when battle starts successfully
     setTransitionVisible(true);
@@ -288,8 +316,8 @@ export default function Battle() {
         Animated.timing(teamSlideAnim, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: true,
-        }),
+        useNativeDriver: true,
+      }),
         Animated.timing(enemySlideAnim, {
           toValue: 1,
           duration: 600,
@@ -317,7 +345,7 @@ export default function Battle() {
           useNativeDriver: true,
         }),
         Animated.timing(exclamationAnim, {
-          toValue: 0,
+        toValue: 0,
           duration: 300,
           useNativeDriver: true,
         }),
@@ -350,9 +378,9 @@ export default function Battle() {
         Animated.timing(battleButtonsSlideAnim, {
           toValue: 0,
           duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
+        useNativeDriver: true,
+      }),
+    ]).start();
     }, 50);
   };
 
@@ -804,11 +832,11 @@ export default function Battle() {
     setTimeout(() => {
       setSelectedMove(null);        
     }, 3000); 
-}
+  }
 
   return (
     <>
-      <ImageBackground 
+    <ImageBackground 
         source={require('../companionImages/backgrounds/meadow.png')} 
         style={styles.backgroundImage}
         resizeMode="cover"
@@ -856,7 +884,7 @@ export default function Battle() {
                       <Image 
                         source={getCompanionImage(companion.image)} 
                         style={styles.teamCompanionImage}
-                        resizeMode="contain"
+      resizeMode="contain"
                       />
                     ) : (
                       <Ionicons name="add" size={35} color="#888888" />
@@ -889,7 +917,7 @@ export default function Battle() {
               })()}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Text style={{ color: "white", fontSize: 18 }}>Start Battle</Text>
+                <Text style={{ color: "white", fontSize: 18, fontFamily: "Afacad_700Bold" }}>Start Battle</Text>
                 <MaterialCommunityIcons name="sword-cross" size={20} color="white" />
               </View>
             </Pressable>
@@ -1046,7 +1074,7 @@ export default function Battle() {
                   onPress={() => setShowFleeModal(false)}
                 >
                   <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-                </TouchableOpacity>
+      </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.modalButtonConfirm]}
                   onPress={confirmFlee}
@@ -1093,8 +1121,8 @@ export default function Battle() {
       <Modal visible={transitionVisible} animationType="none" transparent>
         <View style={styles.transitionContainer}>
           {/* Team sliding from top in triangular formation */}
-          <Animated.View 
-            style={[
+      <Animated.View 
+        style={[
               styles.transitionTeamContainer,
               {
                 transform: [
@@ -1111,9 +1139,9 @@ export default function Battle() {
                     }),
                   },
                 ],
-              },
-            ]}
-          >
+          },
+        ]}
+      >
             {teamMembers.slice(0, 3).map((companionId, index) => {
               const companion = creatures.find(c => c.id === companionId);
               if (!companion) return null;
@@ -1139,8 +1167,8 @@ export default function Battle() {
                 />
               );
             })}
-          </Animated.View>
-
+      </Animated.View>
+      
           {/* Exclamation mark in center */}
           <Animated.View
             style={[
@@ -1189,7 +1217,7 @@ export default function Battle() {
               resizeMode="contain"
             />
           </Animated.View>
-        </View>
+      </View>
       </Modal>
 
       <Modal visible={battleModalVisible} animationType="none">
@@ -1394,19 +1422,19 @@ export default function Battle() {
               {!battleStarted && !showCreatureSelect && (
                 <>
                   <Pressable style={styles.actionButton} onPress={handleStartBattle}>
-                    <MaterialCommunityIcons name="sword-cross" size={30} color="white" />
+                    <MaterialCommunityIcons name="sword-cross" size={30} color="#363946" />
                     <Text style={styles.actionButtonText}>Battle</Text>
                   </Pressable>
                   <Pressable style={styles.actionButton} onPress={handleCreatureSelect}>
-                    <Ionicons name="people" size={30} color="white" />
+                    <Ionicons name="paw" size={30} color="#363946" />
                     <Text style={styles.actionButtonText}>Select Creature</Text>
                   </Pressable>
                   <Pressable style={styles.actionButton} onPress={handleItems}>
-                    <Ionicons name="bag" size={30} color="white" />
+                    <Ionicons name="bag" size={30} color="#363946" />
                     <Text style={styles.actionButtonText}>Items</Text>
                   </Pressable>
                   <Pressable style={styles.actionButton} onPress={handleFlee}>
-                    <Ionicons name="exit-outline" size={30} color="white" />
+                    <Ionicons name="exit-outline" size={30} color="#363946" />
                     <Text style={styles.actionButtonText}>Flee</Text>
                   </Pressable>
                 </>
@@ -1458,14 +1486,14 @@ export default function Battle() {
                           ]}
                           onPress={() => handleCompanionSelect(companionId)}
                         >
-                          <Image 
+            <Image 
                             source={getCompanionImage(companion.image)} 
                             style={[
                               styles.creatureSelectImage,
                               isActive ? styles.creatureSelectImageActive : styles.creatureSelectImageSmall
                             ]} 
-                            resizeMode="contain" 
-                          />
+              resizeMode="contain"
+            />
                           <Text style={[
                             styles.creatureSelectName,
                             isActive && styles.creatureSelectNameActive
@@ -1476,8 +1504,8 @@ export default function Battle() {
                       );
                     });
                   })()}
-                </View>
-              </View>
+          </View>
+      </View>
             )}
 
             {/* Battle Action Buttons */}
@@ -1495,24 +1523,54 @@ export default function Battle() {
                   ],
                 },
               ]}>
-                {/* Rock (Blue) - Top */}
+                {/* Rock (Blue/Magic) - Top */}
                 {selectedMove === null || selectedMove === "rock" ? (
                   <Pressable style={styles.buttonRock} onPress={() => handlePlayerMove("rock")}>
-                    <FontAwesome5 name="magic" size={35} color="white" />
+                    <BlurView intensity={20} style={styles.buttonBlur}>
+                      <LinearGradient
+                        colors={['#1683FF', '#0051D5', '#E657FF']}
+                        style={styles.buttonGradient}
+                      />
+                    </BlurView>
+                    <Image 
+                      source={require('../barena_assets/magicicon.png')} 
+                      style={[styles.buttonIcon, { tintColor: '#FFFFFF' }]}
+                      resizeMode="contain"
+                    />
                   </Pressable>
                 ) : null}
 
-                {/* Paper (Red) - Bottom Left */}
+                {/* Paper (Red/Power) - Bottom Left */}
                 {selectedMove === null || selectedMove === "paper" ? (
                   <Pressable style={styles.buttonPaper} onPress={() => handlePlayerMove("paper")}>
-                    <FontAwesome5 name="fist-raised" size={35} color="white" />
+                    <BlurView intensity={20} style={styles.buttonBlur}>
+                      <LinearGradient
+                        colors={['#FF2B2B', '#CC0000', '#831EFF']}
+                        style={styles.buttonGradient}
+                      />
+                    </BlurView>
+                    <Image 
+                      source={require('../barena_assets/powericon.png')} 
+                      style={[styles.buttonIcon, { tintColor: '#FFFFFF' }]}
+                      resizeMode="contain"
+                    />
                   </Pressable>
                 ) : null}
 
-                {/* Scissors (Green) - Bottom Right */}
+                {/* Scissors (Green/Swift) - Bottom Right */}
                 {selectedMove === null || selectedMove === "scissors" ? (
                   <Pressable style={styles.buttonScissors} onPress={() => handlePlayerMove("scissors")}>
-                    <FontAwesome5 name="wind" size={35} color="white" />
+                    <BlurView intensity={20} style={styles.buttonBlur}>
+                      <LinearGradient
+                        colors={['#5FD919', '#008800', '#FF4145']}
+                        style={styles.buttonGradient}
+                      />
+                    </BlurView>
+                    <Image 
+                      source={require('../barena_assets/swifticon.png')} 
+                      style={[styles.buttonIcon, { tintColor: '#FFFFFF' }]}
+                      resizeMode="contain"
+                    />
                   </Pressable>
                 ) : null}
 
@@ -1541,7 +1599,7 @@ export default function Battle() {
               {renderEnemyMove()}
             </View>
             </Animated.View>
-          </ImageBackground>
+    </ImageBackground>
         </Modal>
     </>
   );
@@ -1581,8 +1639,8 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   apText: {
+    fontFamily: "Afacad_700Bold",
     color: "#B45309",
-    fontWeight: "800",
     fontSize: 14,
     marginLeft: 4,
   },
@@ -1604,8 +1662,8 @@ const styles = StyleSheet.create({
     zIndex: 1001,
   },
   noAPWarningText: {
+    fontFamily: "Afacad_700Bold",
     color: "#FFFFFF",
-    fontWeight: "700",
     fontSize: 14,
     marginLeft: 6,
   },
@@ -1643,10 +1701,10 @@ const styles = StyleSheet.create({
         boxShadow: "0px 4px 5px rgba(0, 0, 0, 0.3)",
       } as any,
       default: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
       },
     })),
     elevation: 8, // Android shadow
@@ -1717,13 +1775,14 @@ const styles = StyleSheet.create({
     borderColor: "#333333",
   },
   subtitle: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 24,
     color: "#ffffff",
     marginBottom: 20,
-    fontWeight: "600",
     textAlign: "center",
   },
   description: {
+    fontFamily: getAfacadFont(),
     fontSize: 16,
     color: "#888888",
     textAlign: "center",
@@ -1743,11 +1802,10 @@ const styles = StyleSheet.create({
     top: 0,
     height: 90,
     width: 90,
-    borderRadius: 100,
-    alignItems: "center",
-    justifyContent: "center",
-    alignContent: "center",
-    backgroundColor: "#017AFF",
+    borderRadius: 45,
+    overflow: "hidden",
+    borderWidth: 4,
+    borderColor: "white",
     zIndex: 2,
   },
   buttonScissors: {
@@ -1756,11 +1814,10 @@ const styles = StyleSheet.create({
     right: "15%",
     height: 90,
     width: 90,
-    borderRadius: 100,
-    alignItems: "center",
-    justifyContent: "center",
-    alignContent: "center",
-    backgroundColor: "green",
+    borderRadius: 45,
+    overflow: "hidden",
+    borderWidth: 4,
+    borderColor: "white",
     zIndex: 2,
   },
   buttonPaper: {
@@ -1769,12 +1826,33 @@ const styles = StyleSheet.create({
     left: "15%",
     height: 90,
     width: 90,
-    borderRadius: 100,
-    alignItems: "center",
-    backgroundColor: "red",
-    justifyContent: "center",
-    alignContent: "center",
+    borderRadius: 45,
+    overflow: "hidden",
+    borderWidth: 4,
+    borderColor: "white",
     zIndex: 2,
+  },
+  buttonBlur: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    borderRadius: 45,
+    overflow: "hidden",
+    opacity: 0.65,
+  },
+  buttonGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 45,
+    opacity: 0.9,
+  },
+  buttonIcon: {
+    width: 50,
+    height: 50,
+    position: "absolute",
+    top: 17,
+    left: 17,
+    zIndex: 10
   },
   arrowRedToBlue: {
     position: "absolute",
@@ -1874,10 +1952,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   title: { 
+    fontFamily: "Afacad_700Bold",
     fontSize: 20, 
     marginBottom: 10,
     color: "white",
-    fontWeight: "bold",
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: -1, height: 1},
     textShadowRadius: 10,
@@ -1907,8 +1985,8 @@ const styles = StyleSheet.create({
   },
   startBattleButton: {
     marginTop: 20,
-    borderColor: "red",
-    backgroundColor: "red",
+    borderColor: "#6320EE",
+    backgroundColor: "#6320EE",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -1951,11 +2029,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E0E0E0",
   },
   bottomSheetTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 20,
-    fontWeight: "700",
     color: "#333",
   },
   teamCountText: {
+    fontFamily: getAfacadFont(),
     fontSize: 14,
     color: "#666",
     marginTop: 4,
@@ -2041,19 +2120,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   exclamationMark: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 120,
     color: '#FFD700',
-    fontWeight: 'bold',
     textShadowColor: 'rgba(255, 215, 0, 0.8)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
   },
   warningText: {
+    fontFamily: "Afacad_500Medium",
     color: '#ff4444',
     fontSize: 14,
     marginTop: 10,
     textAlign: 'center',
-    fontWeight: '500',
   },
   actionButtonsContainer: {
     position: 'absolute',
@@ -2067,14 +2146,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   actionButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: '#93E1D8',
     borderRadius: 15,
     paddingVertical: 15,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
     width: 140,
     height: 80,
   },
@@ -2099,9 +2176,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonText: {
-    color: 'white',
+    fontFamily: "Afacad_700Bold",
+    color: '#363946',
     fontSize: 16,
-    fontWeight: 'bold',
     marginTop: 5,
   },
   creatureSelectBox: {
@@ -2154,15 +2231,16 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   creatureSelectName: {
+    fontFamily: getAfacadFont(),
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
     marginTop: 5,
     textAlign: 'center',
   },
   creatureSelectNameActive: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 18,
     color: 'white',
-    fontWeight: 'bold',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: -1, height: 1},
     textShadowRadius: 10,
@@ -2174,7 +2252,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#454851",
     borderRadius: 20,
     padding: 24,
     alignItems: "center",
@@ -2187,15 +2265,16 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   modalTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 22,
-    fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
-    color: "#333",
+    color: "#FFF",
   },
   modalText: {
+    fontFamily: getAfacadFont(),
     fontSize: 16,
-    color: "#666",
+    color: "#FFF",
     textAlign: "center",
     marginBottom: 24,
   },
@@ -2216,16 +2295,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#E0E0E0",
   },
   modalButtonConfirm: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#6320EE",
   },
   modalButtonTextCancel: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 16,
-    fontWeight: "600",
     color: "#333",
   },
   modalButtonTextConfirm: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 16,
-    fontWeight: "600",
     color: "#FFFFFF",
   },
   battleLockOverlay: {
@@ -2245,8 +2324,8 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   battleLockText: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 20,
-    fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
     marginTop: 20,

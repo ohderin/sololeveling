@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Text, View, StyleSheet, TextInput, TouchableOpacity, Pressable } from "react-native";
 import { addTask } from "../lib/taskStore";
+import { defaultTextStyle } from "../utils/defaultTextStyle";
 
 export default function CreateTask() {
     const router = useRouter();
@@ -27,60 +28,60 @@ export default function CreateTask() {
             <Text style={styles.title}>Create Tasks</Text>
             
             <Text style={styles.label}>Task Name</Text>
-            <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter Task Name"
-                style={styles.input}
-            />
-            
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-                value={desc}
-                onChangeText={setDesc}
-                placeholder="Enter Task Description"
-                multiline
-                style={[styles.input, styles.textArea]}
-            />
-            
-            <Text style={styles.label}>Task Duration</Text>
-            <View style={styles.radioGroup}>
-                <Pressable style={styles.radioOption} onPress={() => setDuration("daily")}>
-                    <View style={styles.radioCircle}>
-                        {duration === "daily" && <View style={styles.radioSelected} />}
-                    </View>
-                    <Text style={styles.radioLabel}>Daily</Text>
-                </Pressable>
-                <Pressable style={styles.radioOption} onPress={() => setDuration("weekly")}>
-                    <View style={styles.radioCircle}>
-                        {duration === "weekly" && <View style={styles.radioSelected} />}
-                    </View>
-                    <Text style={styles.radioLabel}>Weekly</Text>
-                </Pressable>
-            </View>
-            
-            <Text style={styles.label}>Priority</Text>
-            <View style={styles.segmentedControl}>
-                <Pressable 
-                    style={[styles.segment, priority === "low" && styles.segmentActive]} 
-                    onPress={() => setPriority("low")}
-                >
-                    <Text style={[styles.segmentText, priority === "low" && styles.segmentTextActive]}>Low</Text>
-                </Pressable>
-                <Pressable 
-                    style={[styles.segment, priority === "medium" && styles.segmentActive]} 
-                    onPress={() => setPriority("medium")}
-                >
-                    <Text style={[styles.segmentText, priority === "medium" && styles.segmentTextActive]}>Medium</Text>
-                </Pressable>
-                <Pressable 
-                    style={[styles.segment, priority === "high" && styles.segmentActive]} 
-                    onPress={() => setPriority("high")}
-                >
-                    <Text style={[styles.segmentText, priority === "high" && styles.segmentTextActive]}>High</Text>
-                </Pressable>
-            </View>
-            
+                <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Enter Task Name"
+                    style={styles.input}
+                />
+                
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                    value={desc}
+                    onChangeText={setDesc}
+                    placeholder="Enter Task Description"
+                    multiline
+                    style={[styles.input, styles.textArea]}
+                />
+                
+                <Text style={styles.label}>Task Duration</Text>
+                <View style={styles.radioGroup}>
+                    <Pressable style={styles.radioOption} onPress={() => setDuration("daily")}>
+                        <View style={styles.radioCircle}>
+                            {duration === "daily" && <View style={styles.radioSelected} />}
+                        </View>
+                        <Text style={styles.radioLabel}>Daily</Text>
+                    </Pressable>
+                    <Pressable style={styles.radioOption} onPress={() => setDuration("weekly")}>
+                        <View style={styles.radioCircle}>
+                            {duration === "weekly" && <View style={styles.radioSelected} />}
+                        </View>
+                        <Text style={styles.radioLabel}>Weekly</Text>
+                    </Pressable>
+                </View>
+                
+                <Text style={styles.label}>Priority</Text>
+                <View style={styles.segmentedControl}>
+                    <Pressable 
+                        style={[styles.segment, priority === "low" && styles.segmentActive]} 
+                        onPress={() => setPriority("low")}
+                    >
+                        <Text style={[styles.segmentText, priority === "low" && styles.segmentTextActive]}>Low</Text>
+                    </Pressable>
+                    <Pressable 
+                        style={[styles.segment, priority === "medium" && styles.segmentActive]} 
+                        onPress={() => setPriority("medium")}
+                    >
+                        <Text style={[styles.segmentText, priority === "medium" && styles.segmentTextActive]}>Medium</Text>
+                    </Pressable>
+                    <Pressable 
+                        style={[styles.segment, priority === "high" && styles.segmentActive]} 
+                        onPress={() => setPriority("high")}
+                    >
+                        <Text style={[styles.segmentText, priority === "high" && styles.segmentTextActive]}>High</Text>
+                    </Pressable>
+                </View>
+                
             <TouchableOpacity style={styles.addButton} onPress={submit}>
                 <Text style={styles.addButtonText}>Add Task</Text>
             </TouchableOpacity>
@@ -96,6 +97,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   title: {
+    ...defaultTextStyle,
     fontSize: 24,
     fontWeight: "600",
     color: "#000000",
@@ -103,6 +105,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   label: {
+    ...defaultTextStyle,
     fontSize: 16,
     fontWeight: "500",
     color: "#000000",
@@ -110,6 +113,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
+    ...defaultTextStyle,
     backgroundColor: "#F5F5F5",
     borderRadius: 8,
     height: 44,
@@ -148,6 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#007AFF",
   },
   radioLabel: {
+    ...defaultTextStyle,
     fontSize: 16,
     color: "#000000",
   },
@@ -169,11 +174,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#007AFF",
   },
   segmentText: {
+    ...defaultTextStyle,
     fontSize: 16,
     color: "#666666",
     fontWeight: "500",
   },
   segmentTextActive: {
+    ...defaultTextStyle,
     color: "#FFFFFF",
   },
   addButton: {
@@ -184,6 +191,7 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   addButtonText: {
+    ...defaultTextStyle,
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",

@@ -1,9 +1,11 @@
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAudioPlayer } from "expo-audio";
 import { getTasks, subscribe, Task, toggleTask, getDailyCompletions, hax } from "../lib/taskStore";
 import { getActionPoints, subscribeToAP } from "../lib/apStore";
+import { defaultTextStyle, getAfacadFont } from "../utils/defaultTextStyle";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(getTasks());
@@ -11,6 +13,19 @@ export default function Tasks() {
   const [dailyCompletions, setDailyCompletions] = useState<number>(getDailyCompletions());
   const [notCompletedCollapsed, setNotCompletedCollapsed] = useState(false);
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
+  const dingSound = useAudioPlayer(require('../barena_assets/ding!.wav'));
+
+  // Apply SFX volume to ding sound
+  useEffect(() => {
+    const updateVolume = () => {
+      const { getSFXVolume } = require('../lib/soundSettingsStore');
+      dingSound.volume = getSFXVolume() * 0.5; // Keep at 50% of SFX volume
+    };
+    updateVolume();
+    const { subscribe } = require('../lib/soundSettingsStore');
+    const unsubscribe = subscribe(updateVolume);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     // task store listener
@@ -79,7 +94,7 @@ export default function Tasks() {
           <Ionicons 
             name={notCompletedCollapsed ? "chevron-down" : "chevron-up"} 
             size={20} 
-            color="#000" 
+            color="#FFFFFF" 
           />
         </Pressable>
         {!notCompletedCollapsed && notCompletedTasks.length === 0 && (
@@ -89,7 +104,12 @@ export default function Tasks() {
           <TouchableOpacity 
             key={task.id} 
             style={styles.taskCard}
-            onPress={() => toggleTask(task.id)}
+            onPress={() => {
+              // Play sound when marking task as completed (same approach as blippie sound)
+              dingSound.seekTo(0);
+              dingSound.play();
+              toggleTask(task.id);
+            }}
           >
             <View style={styles.taskContent}>
               <Text style={styles.taskTitle}>{task.name}</Text>
@@ -112,7 +132,7 @@ export default function Tasks() {
           <Ionicons 
             name={completedCollapsed ? "chevron-down" : "chevron-up"} 
             size={20} 
-            color="#000" 
+            color="#FFFFFF" 
           />
         </Pressable>
         {!completedCollapsed && completedTasks.length === 0 && (
@@ -149,12 +169,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+    padding: 20,
     paddingTop: 60,
   },
   apContainer: {
     position: "absolute",
-    top: 55,
-    right: 20,
+    top: 40,
+    right: 10,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFBEB",
@@ -171,8 +192,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   apText: {
+    fontFamily: "Afacad_700Bold",
     color: "#B45309",
-    fontWeight: "800",
     fontSize: 14,
     marginLeft: 4,
   },
@@ -180,19 +201,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     marginHorizontal: 20,
-    marginTop: 8,
+    marginTop: 50,
     backgroundColor: "#F9F9F9",
     borderRadius: 12,
     marginBottom: 24,
   },
   bossTaskTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 20,
-    fontWeight: "700",
     color: "#000000",
     textAlign: "center",
     marginBottom: 4,
   },
   bossTaskDesc: {
+    fontFamily: getAfacadFont(),
     fontSize: 16,
     color: "#666666",
     textAlign: "center",
@@ -222,9 +244,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   progressText: {
+    fontFamily: "Afacad_600SemiBold",
     color: "#000000",
     fontSize: 11,
-    fontWeight: "600",
   },
   claimButton: {
     borderWidth: 1,
@@ -240,13 +262,13 @@ const styles = StyleSheet.create({
     borderColor: "#007AFF",
   },
   claimButtonText: {
+    fontFamily: "Afacad_500Medium",
     color: "#666666",
     fontSize: 14,
-    fontWeight: "500",
   },
   claimButtonTextActive: {
+    fontFamily: "Afacad_600SemiBold",
     color: "#FFFFFF",
-    fontWeight: "600",
   },
   scrollView: {
     flex: 1,
@@ -260,12 +282,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionTitle: {
+    fontFamily: "Afacad_700Bold",
     fontSize: 18,
-    fontWeight: "700",
     color: "#000000",
   },
   emptyText: {
-    color: "#999999",
+    fontFamily: getAfacadFont(),
+    color: "#666666",
     fontSize: 14,
     textAlign: "center",
     marginTop: 20,
@@ -288,12 +311,13 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   taskTitle: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 16,
-    fontWeight: "600",
     color: "#000000",
     marginBottom: 4,
   },
   taskDescription: {
+    fontFamily: getAfacadFont(),
     fontSize: 14,
     color: "#666666",
     marginBottom: 4,
@@ -304,13 +328,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   deadlineLabel: {
+    fontFamily: getAfacadFont(),
     fontSize: 12,
     color: "#666666",
   },
   deadlineUrgent: {
+    fontFamily: "Afacad_600SemiBold",
     fontSize: 12,
     color: "#FF0000",
-    fontWeight: "600",
   },
   taskCheckbox: {
     justifyContent: "center",
@@ -327,8 +352,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   bottomButtonText: {
+    fontFamily: "Afacad_600SemiBold",
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
   },
 });
